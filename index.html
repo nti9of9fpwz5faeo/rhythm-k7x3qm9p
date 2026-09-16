@@ -24,6 +24,11 @@
   #startOv{background-image:url(img/bg.jpg);justify-content:center;padding:0}
   #startOv h1{font-size:44px;margin:0 0 8px;color:#fff;text-shadow:0 0 12px var(--cyan),0 0 28px var(--cyan)}
   #startOv p{margin:6px 0;color:#bfe9f5}
+  #songList{display:flex;flex-direction:column;gap:14px;margin-top:22px;width:min(320px,86vw)}
+  .songBtn{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-radius:14px;border:2px solid var(--cyan);background:rgba(7,6,13,.75);color:#fff;font-size:18px;box-shadow:0 0 14px rgba(80,230,255,.35)}
+  .songBtn small{color:#9fd8e6;font-size:13px}
+  .songBtn.hard{border-color:var(--pink);box-shadow:0 0 14px rgba(237,80,170,.4)}
+  .ovBtn.sub{font-size:16px;padding:10px 26px;margin-top:12px;border-color:#556}
   .ovBtn{margin-top:22px;font-size:22px;padding:14px 38px;border-radius:40px;border:2px solid var(--cyan);background:rgba(7,6,13,.7);color:#fff;box-shadow:0 0 16px rgba(80,230,255,.5)}
   #clearOv{background-image:url(img/clear.jpg)}
   #overOv{background-image:url(img/gameover.jpg)}
@@ -44,21 +49,24 @@
 <div class="overlay" id="startOv">
   <h1>Neon Blade</h1>
   <p id="loadTxt">読み込み中…</p>
-  <button class="ovBtn" id="startBtn" style="display:none">タップでスタート</button>
+  <div id="songList"></div>
 </div>
-<div class="overlay hide" id="clearOv"><div class="result" id="clearTxt"></div><button class="ovBtn" data-retry>もう一回</button></div>
-<div class="overlay hide" id="overOv"><div class="result" id="overTxt"></div><button class="ovBtn" data-retry>もう一回</button></div>
+<div class="overlay hide" id="clearOv"><div class="result" id="clearTxt"></div><button class="ovBtn" data-retry>もう一回</button><button class="ovBtn sub" data-select>曲えらび</button></div>
+<div class="overlay hide" id="overOv"><div class="result" id="overTxt"></div><button class="ovBtn" data-retry>もう一回</button><button class="ovBtn sub" data-select>曲えらび</button></div>
 
 <script>
 // ===== 設定 =====
-const BPM = 129;          // 曲のテンポ
-const OFFSET = 0.34;      // 曲の最初のドンまでの秒数
-const WINDOW = 0.15;      // 押すタイミングの許容（前後の秒数）
+// 曲リスト（bpm＝テンポ、offset＝最初のドンまでの秒数）
+const SONGS = [
+  { name: 'Zombie Protocol',     file: 'audio/song.mp3',    bpm: 129,   offset: 0.34, level: 'ふつう' },
+  { name: 'Stutter Bass Groove', file: 'audio/stutter.mp3', bpm: 150.1, offset: 0.0,  level: 'はやい', hard: true },
+];
+let song = SONGS[0], BPM, OFFSET, SPB, WINDOW;
+function setSong(sg){ song = sg; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.15, SPB * 0.3); }
 const COLS = 8, ROWS = 7;
 const MAX_HP = 5;
 const GOAL_INDEX = 52;    // ここに着いたらクリア
 const INTRO_BEATS = 16;   // 最初はブロックを出さない拍数
-const SPB = 60 / BPM;
 
 // ===== コース（ジグザグ） =====
 const path = [];
@@ -76,6 +84,7 @@ function loadImg(n){return new Promise(res=>{const i=new Image();i.onload=()=>re
 
 // ===== 音 =====
 let ctx, songBuf, breakBuf, songSrc = null;
+const bufCache = {};
 async function loadAudio(url){const r=await fetch(url);return await r.arrayBuffer();}
 
 // ===== 画面 =====
@@ -359,23 +368,41 @@ function startGame(){
   songSrc.start(songStart);
   state = 'play';
 }
-document.getElementById('startBtn').addEventListener('click', async () => {
-  if (ctx.state === 'suspended') await ctx.resume();
-  startGame();
-});
 document.querySelectorAll('[data-retry]').forEach(b => b.addEventListener('click', startGame));
+document.querySelectorAll('[data-select]').forEach(b => b.addEventListener('click', () => {
+  state = 'ready';
+  document.querySelectorAll('.overlay').forEach(o => o.classList.add('hide'));
+  document.getElementById('startOv').classList.remove('hide');
+}));
+
+async function pickSong(sg, btn){
+  if (ctx.state === 'suspended') await ctx.resume();
+  const label = btn.querySelector('small'), orig = label.textContent;
+  if (!bufCache[sg.file]){
+    label.textContent = '読み込み中…';
+    bufCache[sg.file] = await ctx.decodeAudioData(await loadAudio(sg.file));
+    label.textContent = orig;
+  }
+  setSong(sg); songBuf = bufCache[sg.file];
+  startGame();
+}
 
 // ===== 起動 =====
 (async () => {
   layout();
   ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const [songAB, seAB] = await Promise.all([loadAudio('audio/song.mp3'), loadAudio('audio/break.mp3'), ...imgList.map(loadImg)]);
-  songBuf = await ctx.decodeAudioData(songAB);
+  setSong(SONGS[0]);
+  const [seAB] = await Promise.all([loadAudio('audio/break.mp3'), ...imgList.map(loadImg)]);
   breakBuf = await ctx.decodeAudioData(seAB);
   reset(); layout();
   state = 'ready';
-  document.getElementById('loadTxt').textContent = '拍に合わせて「ブレイク」と「進む」';
-  document.getElementById('startBtn').style.display = '';
+  document.getElementById('loadTxt').textContent = '曲をえらんでスタート';
+  const list = document.getElementById('songList');
+  for (const sg of SONGS){
+    const b = document.createElement('button'); b.className = 'songBtn' + (sg.hard ? ' hard' : '');
+    b.innerHTML = `<span>${sg.name}</span><small>${sg.level}</small>`;
+    b.addEventListener('click', () => pickSong(sg, b)); list.appendChild(b);
+  }
   loop();
 })();
 </script>
