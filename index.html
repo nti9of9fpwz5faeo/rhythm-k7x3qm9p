@@ -13,6 +13,11 @@
   #hud{height:56px;display:flex;align-items:center;gap:6px;padding-top:env(safe-area-inset-top)}
   #hud img{width:34px;height:34px;transition:opacity .2s,transform .2s}
   #hud img.lost{opacity:.18;transform:scale(.8)}
+  #judge{height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+  #jWord{font-size:30px;font-weight:900;letter-spacing:.04em;font-style:italic}
+  #jSub{font-size:12px;margin-top:3px;opacity:.85}
+  #judge.pop #jWord{animation:jpop .35s ease-out}
+  @keyframes jpop{0%{transform:scale(1.5);opacity:.4}40%{transform:scale(.95);opacity:1}100%{transform:scale(1)}}
   #fieldWrap{flex:1;display:flex;align-items:center;justify-content:center;width:100%}
   canvas{display:block}
   #controls{height:170px;width:100%;max-width:520px;display:flex;justify-content:space-around;align-items:center;padding-bottom:env(safe-area-inset-bottom)}
@@ -33,12 +38,13 @@
   #clearOv{background-image:url(img/clear.jpg)}
   #overOv{background-image:url(img/gameover.jpg)}
   #overOv .ovBtn{border-color:var(--pink);box-shadow:0 0 16px rgba(237,80,170,.5)}
-  .result{font-size:18px;color:#fff;text-shadow:0 0 8px #000}
+  .result{font-size:17px;line-height:1.7;text-align:center;color:#fff;text-shadow:0 0 8px #000}
 </style>
 </head>
 <body>
 <div id="app">
   <div id="hud"></div>
+  <div id="judge"><span id="jWord"></span><small id="jSub"></small></div>
   <div id="fieldWrap"><canvas id="cv"></canvas></div>
   <div id="controls">
     <button class="btn" id="bMove" aria-label="進む"><img src="img/btn_move.png" alt=""></button>
@@ -62,7 +68,7 @@ const SONGS = [
   { name: 'Stutter Bass Groove', file: 'audio/stutter.mp3', bpm: 150.1, offset: 0.0,  level: 'はやい', hard: true },
 ];
 let song = SONGS[0], BPM, OFFSET, SPB, WINDOW;
-function setSong(sg){ song = sg; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.15, SPB * 0.3); }
+function setSong(sg){ song = sg; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.17, SPB * 0.36); }
 const COLS = 8, ROWS = 7;
 const MAX_HP = 5;
 const GOAL_INDEX = 52;    // ここに着いたらクリア
@@ -119,6 +125,7 @@ function reset(){
   nextBeat = 0; acted = -1; pendingCheck = [];
   charState = 'idle'; charUntil = 0; shakeUntil = 0; spawnSeed = Math.floor(Math.random() * 100000) + 1; earlyInput = null;
   prefillNotes();
+  counts = { PERFECT: 0, GREAT: 0, GOOD: 0, MISS: 0 }; combo = 0; maxCombo = 0;
   drawHud();
 }
 // スタート時点で、もう道にブロックが流れてる状態にする
@@ -158,7 +165,7 @@ function onBeat(n, t){
   }
   shakeUntil = t + 0.08;
   // 拍の直前に押されていたら今実行
-  if (earlyInput && t - earlyInput.time <= WINDOW){ doAction(earlyInput.type, n, t); }
+  if (earlyInput && t - earlyInput.time <= WINDOW){ doAction(earlyInput.type, n, t, earlyInput.diff); }
   earlyInput = null;
   pendingCheck.push({ n, checkAt: beatTime(n) + WINDOW });
 }
@@ -176,17 +183,45 @@ function damage(t){
   hp--; drawHud();
   charState = 'damage'; charUntil = t + 0.4;
   texts.push({ s: 'ダメージ', idx: player.idx, t, col: '#ed50aa' });
+  showJudge('MISS', '被弾');
   if (navigator.vibrate) navigator.vibrate(60);
   if (hp <= 0) end(false);
 }
 
-function doAction(type, n, t){
+// ===== 判定 =====
+const JUDGE = {
+  PERFECT: { col: '#ffe36e', glow: '#ffb400' },
+  GREAT:   { col: '#50e6ff', glow: '#0096ff' },
+  GOOD:    { col: '#7dffb0', glow: '#00b464' },
+  MISS:    { col: '#ed50aa', glow: '#a0006a' },
+};
+let counts = { PERFECT: 0, GREAT: 0, GOOD: 0, MISS: 0 }, combo = 0, maxCombo = 0;
+function judgeOf(diff){
+  const a = Math.abs(diff);
+  if (a <= 0.045) return 'PERFECT';
+  if (a <= 0.09) return 'GREAT';
+  return 'GOOD';
+}
+let jTimer = null;
+function showJudge(word, sub){
+  counts[word]++;
+  if (word === 'MISS') combo = 0; else { combo++; maxCombo = Math.max(maxCombo, combo); }
+  const el = document.getElementById('judge'), w = document.getElementById('jWord');
+  w.textContent = word; w.style.color = JUDGE[word].col; w.style.textShadow = `0 0 12px ${JUDGE[word].glow}`;
+  document.getElementById('jSub').textContent = (combo >= 2 ? combo + ' COMBO  ' : '') + (sub || '');
+  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  clearTimeout(jTimer); jTimer = setTimeout(() => { w.textContent = ''; document.getElementById('jSub').textContent = ''; }, 700);
+}
+
+function doAction(type, n, t, diff){
   acted = n;
+  const word = judgeOf(diff), sub = Math.abs(diff) <= 0.045 ? '' : (diff < 0 ? 'FAST' : 'LATE');
   if (type === 'move'){
     if (moveLocked){ texts.push({ s: 'まず1個ブレイク', idx: player.idx, t, col: '#50e6ff' }); }
     else if (player.idx < GOAL_INDEX){
       player.from = player.idx; player.idx += 1; player.at = t;
       charState = 'move'; charUntil = t + 0.18;
+      showJudge(word, sub);
     }
   } else {
     charState = 'slash'; charUntil = t + 0.22;
@@ -197,6 +232,7 @@ function doAction(type, n, t){
       effects.push({ idx: target.idx, t });
       moveLocked = false;
       playSE();
+      showJudge(word, sub);
     }
   }
 }
@@ -208,13 +244,13 @@ function input(type){
   const n = Math.round((t - OFFSET) / SPB);
   const diff = t - beatTime(n);
   if (Math.abs(diff) > WINDOW || n < 0){
-    texts.push({ s: 'ズレ', idx: player.idx, t, col: '#9aa' });
+    showJudge('MISS', 'タイミングずれ');
     return;
   }
   if (acted === n) return; // 1拍に1回だけ
-  if (diff < 0){ earlyInput = { type, time: t }; acted = n; }   // 拍の少し前 → 拍で実行
-  else if (n < nextBeat){ doAction(type, n, t); }               // 拍の少し後 → すぐ実行
-  else { earlyInput = { type, time: t }; acted = n; }
+  if (diff < 0){ earlyInput = { type, time: t, diff }; acted = n; }   // 拍の少し前 → 拍で実行
+  else if (n < nextBeat){ doAction(type, n, t, diff); }               // 拍の少し後 → すぐ実行
+  else { earlyInput = { type, time: t, diff }; acted = n; }
 }
 
 function playSE(){
@@ -222,14 +258,17 @@ function playSE(){
   const s = ctx.createBufferSource(); s.buffer = breakBuf; s.connect(ctx.destination); s.start();
 }
 
+function resultLine(){
+  return `PERFECT ${counts.PERFECT}　GREAT ${counts.GREAT}　GOOD ${counts.GOOD}　MISS ${counts.MISS}<br>最大コンボ ${maxCombo}`;
+}
 function end(clear){
   if (state !== 'play') return;
   state = clear ? 'clear' : 'over';
   setTimeout(() => {
     if (songSrc){ try{ songSrc.stop(); }catch(e){} }
     const beats = Math.max(0, nextBeat);
-    if (clear){ document.getElementById('clearTxt').textContent = `残りHP ${hp} ／ ${beats}拍でゴール`; document.getElementById('clearOv').classList.remove('hide'); }
-    else { document.getElementById('overTxt').textContent = `ゴールまであと ${GOAL_INDEX - player.idx} マス`; document.getElementById('overOv').classList.remove('hide'); }
+    if (clear){ document.getElementById('clearTxt').innerHTML = `残りHP ${hp} ／ ${beats}拍でゴール<br>${resultLine()}`; document.getElementById('clearOv').classList.remove('hide'); }
+    else { document.getElementById('overTxt').innerHTML = `ゴールまであと ${GOAL_INDEX - player.idx} マス<br>${resultLine()}`; document.getElementById('overOv').classList.remove('hide'); }
   }, clear ? 600 : 500);
 }
 
