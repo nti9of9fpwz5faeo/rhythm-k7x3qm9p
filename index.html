@@ -242,6 +242,15 @@ function showJudge(word, sub){
   clearTimeout(jTimer); jTimer = setTimeout(() => { w.textContent = ''; document.getElementById('jSub').textContent = ''; }, 700);
 }
 
+function freeMove(t){
+  if (moveLocked){ texts.push({ s: 'まず1個ブレイク', idx: player.idx, t, col: '#ffffff' }); return; }
+  if (player.idx >= GOAL_INDEX) return;
+  fx.push({ type: 'ghost', idx: player.idx, t, d: .13, flip: path[player.idx].r % 2 === 1 });
+  player.from = player.idx; player.idx += 1; player.at = t;
+  fx.push({ type: 'spark', idx: player.idx, t, d: .2 });
+  charState = 'move'; charUntil = t + 0.18;
+  checkHit(t); // ブロックに突っ込んだらその場で当たり
+}
 function flashBtn(id){ const b = document.getElementById(id); b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 160); }
 function setLockUI(on){ const b = document.getElementById('bMove'); b.classList.toggle('locked', on); if (!on) flashBtn('bMove'); }
 
@@ -277,6 +286,7 @@ let earlyInput = null;
 function input(type){
   if (state !== 'play') return;
   const t = songTime();
+  if (type === 'move'){ freeMove(t); return; } // 進むは拍に関係なく、押した瞬間に動く
   const n = Math.round((t - OFFSET) / SPB);
   const diff = t - beatTime(n);
   if (Math.abs(diff) > WINDOW || n < 0){
