@@ -71,9 +71,10 @@
 const SONGS = [
   { name: 'Zombie Protocol',     file: 'audio/song.mp3',    bpm: 129,   offset: 0.34, level: 'ふつう' },
   { name: 'Stutter Bass Groove', file: 'audio/stutter.mp3', bpm: 150.1, offset: 0.0,  level: 'はやい', hard: true },
+  { name: 'Bass Arcade',         file: 'audio/bass_arcade.mp3', bpm: 134.4, offset: 0.085, level: 'むずかしい', hard: true, dense: true },
 ];
 let song = SONGS[0], BPM, OFFSET, SPB, WINDOW;
-function setSong(sg){ song = sg; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.17, SPB * 0.36); }
+function setSong(sg){ song = sg; PATTERNS = sg.dense ? PATTERNS_DENSE : PATTERNS_NORMAL; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.17, SPB * 0.36); }
 const COLS = 8, ROWS = 7;
 const MAX_HP = 5;
 // チェックポイント（破線）。着いたら解除されて、Gが次の場所へ移動
@@ -153,6 +154,16 @@ function prefillNotes(){
     if ((pat[k % 4] || i === FIRST_GAP) && i - last > 1){ notes.push({ id: noteId++, idx: i, from: i, at: -9, pop: 0 }); last = i; }
   }
 }
+// Gが移動したとき、新しく空いた道にもブロックを並べて、すかすかにならないようにする
+function fillGap(from, to, t){
+  let last = Math.max(-9, ...notes.map(x => x.idx));
+  let pat = PATTERNS[0];
+  for (let i = from; i <= to; i++){
+    const k = i - from;
+    if (k % 4 === 0) pat = PATTERNS[Math.floor(rand() * PATTERNS.length)];
+    if (pat[k % 4] && i - last > 1){ notes.push({ id: noteId++, idx: i, from: i, at: t, pop: t + k * 0.03 }); last = i; }
+  }
+}
 function rand(){ spawnSeed = (spawnSeed * 16807) % 2147483647; return spawnSeed / 2147483647; }
 
 let clockOffset = 0; // performance.now と音の時計のズレ
@@ -166,7 +177,9 @@ function songTime(){
 function beatTime(n){ return OFFSET + n * SPB; }
 
 // 4拍ごとのブロックの出し方
-const PATTERNS = [[1,0,1,0],[1,0,0,0],[1,0,1,0],[0,0,1,0],[1,0,0,1]];
+const PATTERNS_NORMAL = [[1,0,1,0],[1,0,0,0],[1,0,1,0],[0,0,1,0],[1,0,0,1]];
+const PATTERNS_DENSE  = [[1,0,1,0],[1,0,1,0],[1,0,0,1],[0,1,0,1],[1,0,1,0]]; // むずかしい曲：ほぼ2拍に1個
+let PATTERNS = PATTERNS_NORMAL;
 let curPattern = PATTERNS[0];
 
 function onBeat(n, t){
@@ -482,6 +495,7 @@ function loop(){
       if (lineK === LINES.length - 1){ fx.push({ type: 'goal', idx: player.idx, t, d: .5 }); end(true); }
       else {
         lineK++; gFrom = gIdx; gIdx = gIndexFor(lineK); gMoveAt = t;
+        fillGap(gFrom + 1, gIdx, t);
         texts.push({ s: '突破！', idx: player.idx, t, col: '#50e6ff' });
       }
     }
