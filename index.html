@@ -129,6 +129,8 @@ let curPattern = PATTERNS[0];
 function onBeat(n, t){
   // ブロックが1マス迫る
   for (const nt of notes){ nt.from = nt.idx; nt.idx -= 1; nt.at = t; }
+  // 最初の1個は近くにポッと出す（待ち時間を短く）
+  if (n === 4) notes.push({ id: noteId++, idx: 8, from: 8, at: t, pop: t });
   // ブロックを出す
   if (n >= INTRO_BEATS){
     if (n % 4 === 0) curPattern = PATTERNS[Math.floor(rand() * PATTERNS.length)];
@@ -282,7 +284,7 @@ function draw(t){
   // ブロック
   for (const nt of notes){
     const p = cellXY(tween(nt.from, nt.idx, nt.at, t));
-    const sz = cell * .94;
+    const sz = cell * .94 * (nt.pop ? Math.min(1, Math.max(0, (t - nt.pop) / 0.2)) : 1);
     g.drawImage(IMG.block, p.x - sz / 2, p.y - sz / 2, sz, sz);
   }
   // 壊れたブロック
