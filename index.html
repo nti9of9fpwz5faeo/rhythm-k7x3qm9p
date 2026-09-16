@@ -74,7 +74,7 @@ const SONGS = [
   { name: 'Bass Arcade',         file: 'audio/bass_arcade.mp3', bpm: 134.4, offset: 0.085, level: 'むずかしい', hard: true, dense: true },
 ];
 let song = SONGS[0], BPM, OFFSET, SPB, WINDOW;
-function setSong(sg){ song = sg; PATTERNS = sg.dense ? PATTERNS_DENSE : PATTERNS_NORMAL; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.17, SPB * 0.36); }
+function setSong(sg){ song = sg; GAPS = sg.dense ? GAPS_DENSE : GAPS_NORMAL; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.17, SPB * 0.36); }
 const COLS = 8, ROWS = 7;
 const MAX_HP = 5;
 // チェックポイント（破線）。着いたら解除されて、Gが次の場所へ移動
@@ -139,29 +139,20 @@ function reset(){
   setLockUI(true);
   nextBeat = 0; acted = -1; pendingCheck = [];
   charState = 'idle'; charUntil = 0; shakeUntil = 0; spawnSeed = Math.floor(Math.random() * 100000) + 1; earlyInput = null;
+  nextGap = 4;
   lineK = 0; gIdx = gIndexFor(0); gMoveAt = -9; gFrom = gIdx;
   counts = { PERFECT: 0, GREAT: 0, GOOD: 0, MISS: 0 }; combo = 0; maxCombo = 0;
   drawHud();
 }
-// スタート時点で、もう道にブロックが流れてる状態にする
 let lineK = 0, gIdx = 0, gFrom = 0, gMoveAt = -9;
 function gIndexFor(k){ return Math.min(LINES[k] + G_AHEAD, EXIT_INDEX); }
-function prefillNotes(){
-  let pat = PATTERNS[0], last = -9;
-  for (let i = FIRST_GAP; i <= EXIT_INDEX; i++){
-    const k = i - FIRST_GAP;
-    if (k % 4 === 0) pat = PATTERNS[Math.floor(rand() * PATTERNS.length)];
-    if ((pat[k % 4] || i === FIRST_GAP) && i - last > 1){ notes.push({ id: noteId++, idx: i, from: i, at: -9, pop: 0 }); last = i; }
-  }
-}
 // Gが移動したとき、新しく空いた道にもブロックを並べて、すかすかにならないようにする
 function fillGap(from, to, t){
-  let last = Math.max(-9, ...notes.map(x => x.idx));
-  let pat = PATTERNS[0];
-  for (let i = from; i <= to; i++){
-    const k = i - from;
-    if (k % 4 === 0) pat = PATTERNS[Math.floor(rand() * PATTERNS.length)];
-    if (pat[k % 4] && i - last > 1){ notes.push({ id: noteId++, idx: i, from: i, at: t, pop: t + k * 0.03 }); last = i; }
+  let last = Math.max(-99, ...notes.map(x => x.idx));
+  let i = Math.max(from, last + pickGap());
+  while (i <= to){
+    notes.push({ id: noteId++, idx: i, from: i, at: t, pop: t + (i - from) * 0.03 });
+    last = i; i += pickGap();
   }
 }
 function rand(){ spawnSeed = (spawnSeed * 16807) % 2147483647; return spawnSeed / 2147483647; }
@@ -177,19 +168,22 @@ function songTime(){
 function beatTime(n){ return OFFSET + n * SPB; }
 
 // 4拍ごとのブロックの出し方
-const PATTERNS_NORMAL = [[1,0,1,0],[1,0,0,0],[1,0,1,0],[0,0,1,0],[1,0,0,1]];
-const PATTERNS_DENSE  = [[1,0,1,0],[1,0,1,0],[1,0,0,1],[0,1,0,1],[1,0,1,0]]; // むずかしい曲：ほぼ2拍に1個
-let PATTERNS = PATTERNS_NORMAL;
-let curPattern = PATTERNS[0];
+// ブロックの間隔（マス数）。3以上＝あいだに必ず2マス空く → 壊したら必ず1歩進める
+const GAPS_NORMAL = [3, 4, 4, 5, 6];
+const GAPS_DENSE  = [3, 3, 3, 4];     // むずかしい曲：ほぼ3マスおき
+let GAPS = GAPS_NORMAL, PATTERNS = null, curPattern = null;
+let nextGap = 4;
+function pickGap(){ return GAPS[Math.floor(rand() * GAPS.length)]; }
 
 function onBeat(n, t){
   // ブロックが1マス迫る（最初の数拍は止まってる）
   if (n >= INTRO_BEATS) for (const nt of notes){ nt.from = nt.idx; nt.idx -= 1; nt.at = t; }
   // ブロックを出す
   if (n >= INTRO_BEATS){
-    if (n % 4 === 0) curPattern = PATTERNS[Math.floor(rand() * PATTERNS.length)];
-    if (curPattern[n % 4] && !notes.some(x => x.idx >= gIdx - 1)){
+    const lastIdx = Math.max(-99, ...notes.map(x => x.idx));
+    if (gIdx - lastIdx >= nextGap){
       notes.push({ id: noteId++, idx: gIdx, from: gIdx, at: t, pop: t });
+      nextGap = pickGap();
     }
   }
   shakeUntil = t + 0.08;
