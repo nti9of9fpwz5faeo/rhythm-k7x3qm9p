@@ -66,7 +66,8 @@ function setSong(sg){ song = sg; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BP
 const COLS = 8, ROWS = 7;
 const MAX_HP = 5;
 const GOAL_INDEX = 52;    // ここに着いたらクリア
-const INTRO_BEATS = 16;   // 最初はブロックを出さない拍数
+const INTRO_BEATS = 4;    // 最初の数拍はブロックが止まってる（準備時間）
+const FIRST_GAP = 3;      // スタートから一番近いブロックまでのマス数
 
 // ===== コース（ジグザグ） =====
 const path = [];
@@ -116,8 +117,18 @@ function reset(){
   hp = MAX_HP; player = { idx: 0, from: 0, at: 0 }; moveLocked = true;
   notes = []; effects = []; texts = [];
   nextBeat = 0; acted = -1; pendingCheck = [];
-  charState = 'idle'; charUntil = 0; shakeUntil = 0; spawnSeed = 12345; earlyInput = null;
+  charState = 'idle'; charUntil = 0; shakeUntil = 0; spawnSeed = Math.floor(Math.random() * 100000) + 1; earlyInput = null;
+  prefillNotes();
   drawHud();
+}
+// スタート時点で、もう道にブロックが流れてる状態にする
+function prefillNotes(){
+  let pat = PATTERNS[0], last = -9;
+  for (let i = FIRST_GAP; i <= EXIT_INDEX; i++){
+    const k = i - FIRST_GAP;
+    if (k % 4 === 0) pat = PATTERNS[Math.floor(rand() * PATTERNS.length)];
+    if ((pat[k % 4] || i === FIRST_GAP) && i - last > 1){ notes.push({ id: noteId++, idx: i, from: i, at: -9, pop: 0 }); last = i; }
+  }
 }
 function rand(){ spawnSeed = (spawnSeed * 16807) % 2147483647; return spawnSeed / 2147483647; }
 
@@ -136,10 +147,8 @@ const PATTERNS = [[1,0,1,0],[1,0,0,0],[1,0,1,0],[0,0,1,0],[1,0,0,1]];
 let curPattern = PATTERNS[0];
 
 function onBeat(n, t){
-  // ブロックが1マス迫る
-  for (const nt of notes){ nt.from = nt.idx; nt.idx -= 1; nt.at = t; }
-  // 最初の1個は近くにポッと出す（待ち時間を短く）
-  if (n === 4) notes.push({ id: noteId++, idx: 8, from: 8, at: t, pop: t });
+  // ブロックが1マス迫る（最初の数拍は止まってる）
+  if (n >= INTRO_BEATS) for (const nt of notes){ nt.from = nt.idx; nt.idx -= 1; nt.at = t; }
   // ブロックを出す
   if (n >= INTRO_BEATS){
     if (n % 4 === 0) curPattern = PATTERNS[Math.floor(rand() * PATTERNS.length)];
