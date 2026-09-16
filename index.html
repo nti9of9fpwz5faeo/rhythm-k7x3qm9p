@@ -71,7 +71,10 @@ let song = SONGS[0], BPM, OFFSET, SPB, WINDOW;
 function setSong(sg){ song = sg; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.17, SPB * 0.36); }
 const COLS = 8, ROWS = 7;
 const MAX_HP = 5;
-const GOAL_INDEX = 52;    // ここに着いたらクリア
+// チェックポイント（破線）。着いたら解除されて、Gが次の場所へ移動
+const LINES = [4, 12, 20, 28, 36, 44, 51];
+const G_AHEAD = 4;        // Gはラインの何マス先に置くか
+const GOAL_INDEX = LINES[LINES.length - 1]; // 最後のラインでクリア
 const INTRO_BEATS = 4;    // 最初の数拍はブロックが止まってる（準備時間）
 const FIRST_GAP = 3;      // スタートから一番近いブロックまでのマス数
 
@@ -124,11 +127,13 @@ function reset(){
   notes = []; effects = []; texts = [];
   nextBeat = 0; acted = -1; pendingCheck = [];
   charState = 'idle'; charUntil = 0; shakeUntil = 0; spawnSeed = Math.floor(Math.random() * 100000) + 1; earlyInput = null;
-  prefillNotes();
+  lineK = 0; gIdx = gIndexFor(0); gMoveAt = -9; gFrom = gIdx;
   counts = { PERFECT: 0, GREAT: 0, GOOD: 0, MISS: 0 }; combo = 0; maxCombo = 0;
   drawHud();
 }
 // スタート時点で、もう道にブロックが流れてる状態にする
+let lineK = 0, gIdx = 0, gFrom = 0, gMoveAt = -9;
+function gIndexFor(k){ return Math.min(LINES[k] + G_AHEAD, EXIT_INDEX); }
 function prefillNotes(){
   let pat = PATTERNS[0], last = -9;
   for (let i = FIRST_GAP; i <= EXIT_INDEX; i++){
@@ -159,8 +164,8 @@ function onBeat(n, t){
   // ブロックを出す
   if (n >= INTRO_BEATS){
     if (n % 4 === 0) curPattern = PATTERNS[Math.floor(rand() * PATTERNS.length)];
-    if (curPattern[n % 4] && !notes.some(x => x.idx >= EXIT_INDEX - 1)){
-      notes.push({ id: noteId++, idx: EXIT_INDEX, from: EXIT_INDEX + 0.6, at: t });
+    if (curPattern[n % 4] && !notes.some(x => x.idx >= gIdx - 1)){
+      notes.push({ id: noteId++, idx: gIdx, from: gIdx, at: t, pop: t });
     }
   }
   shakeUntil = t + 0.08;
@@ -300,15 +305,8 @@ function buildStatic(){
   for (let r = 1; r < ROWS; r++){ g.beginPath(); g.moveTo(0, r * cell); g.lineTo(COLS * cell, r * cell); g.stroke(); }
 
   // スタートと出口
-  const s0 = cellXY(0), e0 = cellXY(EXIT_INDEX);
+  const s0 = cellXY(0);
   g.drawImage(IMG.start, s0.x - cell * .46, s0.y - cell * .46, cell * .92, cell * .92);
-  g.drawImage(IMG.exit, e0.x - cell * .48, e0.y - cell * .48, cell * .96, cell * .96);
-
-  // ゴールの破線
-  const gp = path[GOAL_INDEX], gx = gp.c * cell; // 出口側のふち
-  g.save(); g.strokeStyle = '#ffc83c'; g.lineWidth = 3; g.setLineDash([6, 5]);
-  g.shadowColor = '#ffc83c'; g.shadowBlur = 8;
-  g.beginPath(); g.moveTo(gx, gp.r * cell + 3); g.lineTo(gx, (gp.r + 1) * cell - 3); g.stroke(); g.restore();
 
   // 壁
   const wh = Math.max(6, cell * .16);
@@ -337,6 +335,7 @@ function draw(t){
   g.save(); g.translate(sx, sy);
 
   g.drawImage(staticCv, 0, 0, cell * COLS, cell * ROWS);
+  drawLineAndG(t);
 
   // ブロック
   for (const nt of notes){
@@ -364,6 +363,27 @@ function draw(t){
   g.restore();
 }
 
+// マスiとi+1の境目に線を引く
+function edgeLine(i){
+  const a = path[i], b = path[i + 1];
+  if (!b) return null;
+  if (a.r === b.r){ const x = Math.max(a.c, b.c) * cell; return [x, a.r * cell + 4, x, (a.r + 1) * cell - 4]; }
+  const y = Math.max(a.r, b.r) * cell; return [a.c * cell + 4, y, (a.c + 1) * cell - 4, y];
+}
+function drawLineAndG(t){
+  const last = lineK === LINES.length - 1;
+  const L = edgeLine(LINES[lineK]);
+  if (L){
+    g.save(); g.strokeStyle = last ? '#ffc83c' : '#50e6ff'; g.lineWidth = 3; g.setLineDash([6, 5]);
+    g.globalAlpha = .6 + .4 * Math.max(0, 1 - ((t - OFFSET) / SPB % 1) * 2); // 拍でドクッと光る
+    g.beginPath(); g.moveTo(L[0], L[1]); g.lineTo(L[2], L[3]); g.stroke(); g.restore();
+  }
+  // G（移動するときはシュッと動く）
+  const k = Math.min(1, Math.max(0, (t - gMoveAt) / 0.35)), e = 1 - Math.pow(1 - k, 3);
+  const p = cellXY(gFrom + (gIdx - gFrom) * e), sz = cell * .96;
+  g.drawImage(IMG.exit, p.x - sz / 2, p.y - sz / 2, sz, sz);
+}
+
 function drawChar(t){
   if (t > charUntil) charState = 'idle';
   const sp = glowChar[charState];
@@ -387,7 +407,13 @@ function loop(){
     syncClock();
     while (t >= beatTime(nextBeat)){ onBeat(nextBeat, beatTime(nextBeat)); nextBeat++; }
     while (pendingCheck.length && t >= pendingCheck[0].checkAt){ pendingCheck.shift(); checkHit(t); }
-    if (player.idx >= GOAL_INDEX && hp > 0) end(true);
+    if (player.idx >= LINES[lineK] && hp > 0){
+      if (lineK === LINES.length - 1) end(true);
+      else {
+        lineK++; gFrom = gIdx; gIdx = gIndexFor(lineK); gMoveAt = t;
+        texts.push({ s: '突破！', idx: player.idx, t, col: '#50e6ff' });
+      }
+    }
     if (t > songBuf.duration) end(false);
   }
   draw(t);
