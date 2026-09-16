@@ -36,8 +36,8 @@
   <div id="hud"></div>
   <div id="fieldWrap"><canvas id="cv"></canvas></div>
   <div id="controls">
-    <button class="btn" id="bBreak" aria-label="ブレイク"><img src="img/btn_break.png" alt=""></button>
     <button class="btn" id="bMove" aria-label="進む"><img src="img/btn_move.png" alt=""></button>
+    <button class="btn" id="bBreak" aria-label="ブレイク"><img src="img/btn_break.png" alt=""></button>
   </div>
 </div>
 
@@ -79,7 +79,7 @@ let ctx, songBuf, breakBuf, songSrc = null;
 async function loadAudio(url){const r=await fetch(url);return await r.arrayBuffer();}
 
 // ===== 画面 =====
-const cv = document.getElementById('cv'), g = cv.getContext('2d');
+const cv = document.getElementById('cv'); let g = cv.getContext('2d');
 let cell = 40, dpr = 1;
 function layout(){
   const wrap = document.getElementById('fieldWrap').getBoundingClientRect();
@@ -87,6 +87,7 @@ function layout(){
   dpr = window.devicePixelRatio || 1;
   cv.style.width = cell * COLS + 'px'; cv.style.height = cell * ROWS + 'px';
   cv.width = cell * COLS * dpr; cv.height = cell * ROWS * dpr;
+  if (IMG.floor && IMG.floor.complete) buildStatic();
 }
 window.addEventListener('resize', layout);
 
@@ -100,9 +101,10 @@ function drawHud(){
 let state = 'loading';
 let songStart = 0, hp, player, notes, effects, texts, nextBeat, acted, pendingCheck, charState, charUntil, shakeUntil, lastMoveAt, spawnSeed;
 let noteId = 0;
+let moveLocked = true; // 最初のブロックを壊すまで進めない
 
 function reset(){
-  hp = MAX_HP; player = { idx: 0, from: 0, at: 0 };
+  hp = MAX_HP; player = { idx: 0, from: 0, at: 0 }; moveLocked = true;
   notes = []; effects = []; texts = [];
   nextBeat = 0; acted = -1; pendingCheck = [];
   charState = 'idle'; charUntil = 0; shakeUntil = 0; spawnSeed = 12345; earlyInput = null;
@@ -110,7 +112,14 @@ function reset(){
 }
 function rand(){ spawnSeed = (spawnSeed * 16807) % 2147483647; return spawnSeed / 2147483647; }
 
-function songTime(){ return ctx.currentTime - songStart - (ctx.outputLatency || 0); }
+let clockOffset = 0; // performance.now と音の時計のズレ
+function syncClock(){
+  const est = ctx.currentTime - performance.now() / 1000;
+  clockOffset = clockOffset === null ? est : clockOffset + (est - clockOffset) * 0.05;
+}
+function songTime(){
+  return performance.now() / 1000 + clockOffset - songStart - (ctx.outputLatency || 0) - (ctx.baseLatency || 0);
+}
 function beatTime(n){ return OFFSET + n * SPB; }
 
 // 4拍ごとのブロックの出し方
@@ -154,7 +163,8 @@ function damage(t){
 function doAction(type, n, t){
   acted = n;
   if (type === 'move'){
-    if (player.idx < GOAL_INDEX){
+    if (moveLocked){ texts.push({ s: 'まず1個ブレイク', idx: player.idx, t, col: '#50e6ff' }); }
+    else if (player.idx < GOAL_INDEX){
       player.from = player.idx; player.idx += 1; player.at = t;
       charState = 'move'; charUntil = t + 0.18;
     }
@@ -165,6 +175,7 @@ function doAction(type, n, t){
     if (target){
       notes.splice(notes.indexOf(target), 1);
       effects.push({ idx: target.idx, t });
+      moveLocked = false;
       playSE();
     }
   }
@@ -214,13 +225,12 @@ function tween(from, to, at, t){
   return from + (to - from) * e;
 }
 
-function draw(t){
-  g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  let sx = 0, sy = 0;
-  if (t < shakeUntil){ sx = (Math.random() - .5) * 5; sy = (Math.random() - .5) * 5; }
-  g.clearRect(0, 0, cell * COLS, cell * ROWS);
-  g.save(); g.translate(sx, sy);
-
+// 動かない部分（床・壁・S・G・ゴール）は1回だけ描いておく
+const staticCv = document.createElement('canvas');
+const glowChar = {};
+function buildStatic(){
+  staticCv.width = cell * COLS * dpr; staticCv.height = cell * ROWS * dpr;
+  const g0 = g; g = staticCv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   // 床
   g.fillStyle = 'rgba(5,5,12,.55)'; g.fillRect(0, 0, cell * COLS, cell * ROWS);
   for (const p of path){ g.globalAlpha = .9; g.drawImage(IMG.floor, p.c * cell, p.r * cell, cell, cell); }
@@ -250,6 +260,25 @@ function draw(t){
   }
   g.strokeStyle = '#1d2230'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, COLS * cell - 3, ROWS * cell - 3);
 
+  g = g0;
+  // キャラの光るふちどりも先に作っておく
+  for (const k of ['idle','move','slash','damage']){
+    const im = IMG['char_' + k]; const w = Math.round(cell * 2.3 * dpr), h = Math.round(w * im.height / im.width), pad = Math.round(cell * .3 * dpr);
+    const c = document.createElement('canvas'); c.width = w + pad * 2; c.height = h + pad * 2;
+    const x = c.getContext('2d'); x.shadowColor = 'rgba(80,230,255,.9)'; x.shadowBlur = cell * .25 * dpr;
+    x.drawImage(im, pad, pad, w, h); glowChar[k] = { c, pad: pad / dpr, w: w / dpr, h: h / dpr };
+  }
+}
+
+function draw(t){
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  let sx = 0, sy = 0;
+  if (t < shakeUntil){ sx = (Math.random() - .5) * 5; sy = (Math.random() - .5) * 5; }
+  g.clearRect(0, 0, cell * COLS, cell * ROWS);
+  g.save(); g.translate(sx, sy);
+
+  g.drawImage(staticCv, 0, 0, cell * COLS, cell * ROWS);
+
   // ブロック
   for (const nt of notes){
     const p = cellXY(tween(nt.from, nt.idx, nt.at, t));
@@ -278,19 +307,15 @@ function draw(t){
 
 function drawChar(t){
   if (t > charUntil) charState = 'idle';
-  const im = IMG['char_' + charState];
+  const sp = glowChar[charState];
   const p = cellXY(tween(player.from, player.idx, player.at, t));
-  // 向き：次のマスの方向
-  const a = path[player.idx], b = path[Math.min(player.idx + 1, path.length - 1)];
-  const dx = b.c - a.c, dy = b.r - a.r;
-  const w = cell * 2.3, h = w * im.height / im.width;
+  // 向き：段の進む方向だけ（下に降りるときも変えない）
+  const faceRight = path[player.idx].r % 2 === 1;
   const ax = 0.66, ay = 0.52; // 画像の中で体の中心がある場所
   g.save(); g.translate(p.x, p.y);
-  if (dx > 0) g.scale(-1, 1);
-  else if (dy > 0) g.rotate(-Math.PI / 2);
+  if (faceRight) g.scale(-1, 1);
   if (charState === 'damage' && Math.floor(t * 20) % 2) g.globalAlpha = .45;
-  g.shadowColor = 'rgba(80,230,255,.9)'; g.shadowBlur = cell * .25;
-  g.drawImage(im, -w * ax, -h * ay, w, h);
+  g.drawImage(sp.c, -sp.w * ax - sp.pad, -sp.h * ay - sp.pad, sp.w + sp.pad * 2, sp.h + sp.pad * 2);
   g.restore();
 }
 
@@ -300,6 +325,7 @@ function loop(){
   if (state === 'loading') return;
   const t = state === 'play' || state === 'clear' || state === 'over' ? songTime() : 0;
   if (state === 'play'){
+    syncClock();
     while (t >= beatTime(nextBeat)){ onBeat(nextBeat, beatTime(nextBeat)); nextBeat++; }
     while (pendingCheck.length && t >= pendingCheck[0].checkAt){ pendingCheck.shift(); checkHit(t); }
     if (player.idx >= GOAL_INDEX && hp > 0) end(true);
@@ -317,8 +343,8 @@ function bindBtn(id, type){
 bindBtn('bBreak', 'break'); bindBtn('bMove', 'move');
 window.addEventListener('keydown', e => {
   if (e.repeat) return;
-  if (e.key === 'ArrowLeft' || e.key === 'j') input('break');
-  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'k') input('move');
+  if (e.key === 'ArrowRight' || e.key === 'k') input('break');
+  if (e.key === 'ArrowLeft' || e.key === ' ' || e.key === 'j') input('move');
 });
 
 function startGame(){
@@ -327,6 +353,7 @@ function startGame(){
   if (songSrc){ try{ songSrc.stop(); }catch(e){} }
   songSrc = ctx.createBufferSource(); songSrc.buffer = songBuf; songSrc.connect(ctx.destination);
   songStart = ctx.currentTime + 0.25;
+  clockOffset = ctx.currentTime - performance.now() / 1000;
   songSrc.start(songStart);
   state = 'play';
 }
