@@ -253,7 +253,25 @@ const DIFFICULTIES={normal:{maxRun:4,gaps:[1,1,2,2,3],dense:[1,1,1,2,3]},hard:{m
 let song = SONGS[0], BPM, OFFSET, SPB, WINDOW;
 const chartCache={};
 let activeChart=null;
-function setSong(sg){ song = sg; activeChart=chartCache[sg.chart]||null; GAPS = sg.dense ? DIFFICULTIES[difficulty].dense : DIFFICULTIES[difficulty].gaps; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.17, SPB * 0.36); }
+// ブロックは半拍ごとに1マス進む（2倍速）。1ステップ＝半拍
+const SUBDIV = 2;
+const expandedCharts = new WeakMap();
+function expandChart(c){
+  if(!c)return null;
+  if(expandedCharts.has(c))return expandedCharts.get(c);
+  const beats=[],accents=[],spawn={};
+  for(const k of Object.keys(c.spawn))spawn[k]=[];
+  for(let i=0;i<c.beats.length;i++){
+    beats.push(c.beats[i]);accents.push(c.accents?.[i]??1);
+    for(const k in spawn)spawn[k].push(c.spawn[k][i]);
+    if(i<c.beats.length-1){
+      beats.push((c.beats[i]+c.beats[i+1])/2);accents.push(.45);
+      for(const k in spawn)spawn[k].push(0);
+    }
+  }
+  const e={...c,beats,accents,spawn};expandedCharts.set(c,e);return e;
+}
+function setSong(sg){ song = sg; activeChart=expandChart(chartCache[sg.chart]); GAPS = sg.dense ? DIFFICULTIES[difficulty].dense : DIFFICULTIES[difficulty].gaps; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM / SUBDIV; WINDOW = Math.min(0.12, SPB * 0.45); }
 const COLS = 8, ROWS = 11;
 const MAX_HP = 5;
 // チェックポイント（破線）。着いたら解除されて、Gが次の場所へ移動
@@ -261,7 +279,7 @@ const LINES = [4, 10, 16, 22, 28, 35];
 const REVEAL_ENDS = [19, 26, 32, 35, 39, 39]; // 開始時は手前の横道3本まで
 const G_AHEAD = 4;        // Gはラインの何マス先に置くか
 const GOAL_INDEX = LINES[LINES.length - 1]; // 最後のラインでクリア
-const INTRO_BEATS = 4;    // 最初の数拍はブロックが止まってる（準備時間）
+const INTRO_BEATS = 8;    // 最初の数拍はブロックが止まってる（準備時間）
 const FIRST_GAP = 3;      // スタートから一番近いブロックまでのマス数
 
 // ===== コース（ジグザグ） =====
@@ -570,7 +588,7 @@ function onBeat(n, t){
       if(!activeChart)nextGap = pickGap();
     }
   }
-  lastBeatAt = t;lastBeatStrength=activeChart?.accents[n]??1;
+  lastBeatAt = t;lastBeatStrength=activeChart?.accents[n]??(n%SUBDIV?.45:1);
   // 拍の直前に押されていたら今実行
   if (earlyInput && t - earlyInput.time <= WINDOW){ doAction(earlyInput.type, n, t, earlyInput.diff); }
   earlyInput = null;
@@ -702,6 +720,7 @@ function startMoveScheduler(){
 }
 function playMoveSE(n,at){
   if (!moveBuf || state !== 'play') return;
+  if (n % SUBDIV) return; // 動く音は表の拍だけ（うるさくならないように）
   const src = ctx.createBufferSource(), gn = ctx.createGain();
   src.buffer = moveBuf; gn.gain.value = MOVE_SE_VOL;
   src.connect(gn); gn.connect(ctx.destination);
@@ -1239,7 +1258,7 @@ async function resumeGame(){
       startMoveScheduler();document.getElementById('pauseBtn').focus();return;
     }
     document.getElementById('pauseStatus').textContent=String(count--);
-    uiTone(600,.04);resumeTimer=setTimeout(tick,SPB*1000);
+    uiTone(600,.04);resumeTimer=setTimeout(tick,SPB*SUBDIV*1000);
   };tick();
 }
 function returnToSongs(){
