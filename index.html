@@ -178,7 +178,7 @@ function reset(){
   setLockUI(true);
   nextBeat = 0; acted = -1; pendingCheck = [];
   charState = 'idle'; charUntil = 0; shakeUntil = 0; spawnSeed = Math.floor(Math.random() * 100000) + 1; earlyInput = null;
-  nextGap = 4;
+  nextGap = 4; runLen = 1;
   lineK = 0; gIdx = gIndexFor(0); gMoveAt = -9; gFrom = gIdx;
   counts = { PERFECT: 0, GREAT: 0, GOOD: 0, MISS: 0 }; combo = 0; maxCombo = 0;
   drawHud();
@@ -208,11 +208,19 @@ function beatTime(n){ return OFFSET + n * SPB; }
 
 // 4拍ごとのブロックの出し方
 // ブロックの間隔（マス数）。3以上＝あいだに必ず2マス空く → 壊したら必ず1歩進める
-const GAPS_NORMAL = [3, 4, 4, 5, 6];
-const GAPS_DENSE  = [3, 3, 3, 4];     // むずかしい曲：ほぼ3マスおき
+// 1＝くっついて連続で来る、2＝1マスあき、3＝2マスあき…
+const GAPS_NORMAL = [1, 2, 2, 3, 3, 4];
+const GAPS_DENSE  = [1, 1, 2, 2, 3];
+const MAX_RUN = 3;   // 連続で来るのは最大3個まで。そのあとは必ず2マス以上あける
 let GAPS = GAPS_NORMAL, PATTERNS = null, curPattern = null;
 let nextGap = 4;
-function pickGap(){ return GAPS[Math.floor(rand() * GAPS.length)]; }
+let runLen = 1;
+function pickGap(){
+  let gp = GAPS[Math.floor(rand() * GAPS.length)];
+  if (gp === 1 && runLen >= MAX_RUN) gp = 3;   // 連続しすぎたら休憩
+  runLen = gp === 1 ? runLen + 1 : 1;
+  return gp;
+}
 
 function onBeat(n, t){
   // ブロックが1マス迫る（最初の数拍は止まってる）
