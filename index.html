@@ -117,6 +117,33 @@
   @media(max-width:350px){#judge{width:136px;height:48px}#jWord{font-size:21px}}
   @media(prefers-reduced-motion:reduce){.victoryCopy,#clearOv .resultTitle{animation:none}}
 
+  /* キャラクター選択：図形と太い輪郭、指で選べる4枚のカード。 */
+  #startOv{overflow-y:auto;touch-action:pan-y;justify-content:safe center}
+  #heroOpen{display:flex;align-items:center;gap:12px;width:min(360px,100%);min-height:88px;margin:16px 0 4px;padding:6px 15px 6px 4px;border:3px solid #071423;border-radius:20px;background:#153fbed9;box-shadow:inset 0 0 0 2px #72eaff;color:#fff;text-align:left;flex-shrink:0}
+  #heroOpen canvas{width:94px;height:74px;flex:none}#heroOpen span{display:flex;flex-direction:column;gap:3px;flex:1}
+  #heroOpen small{font-size:11px;color:#bcf4ff}#heroOpen strong{font-size:21px;font-weight:1000;-webkit-text-stroke:3px #081221;paint-order:stroke fill}
+  #heroOpen b{font-size:12px;padding:7px 9px;border:2px solid #081221;border-radius:10px;background:#baff3d;color:#081221;white-space:nowrap}
+  #heroOpen:disabled{opacity:.6}
+  #heroOv{--hero-accent:#37e9ff;--hero-dark:#075bc9;z-index:11;overflow-y:auto;touch-action:pan-y;justify-content:safe center;padding:calc(env(safe-area-inset-top) + 18px) 20px calc(env(safe-area-inset-bottom) + 18px);background:linear-gradient(155deg,#0842ed,var(--hero-dark))}
+  .heroPanel{width:min(390px,100%);flex:none}
+  .heroHeading{display:flex;align-items:center;gap:12px}.heroHeading h2{flex:1;margin:0;font-size:24px;font-weight:1000;-webkit-text-stroke:4px #081221;paint-order:stroke fill;letter-spacing:.02em}
+  #heroBack{width:44px;height:44px;border:3px solid #081221;border-radius:14px;background:#fff;color:#081221;font-size:25px;font-weight:900}
+  .heroStage{position:relative;height:210px;display:grid;place-items:center;isolation:isolate;margin-top:4px}
+  .heroStage:before{content:"";position:absolute;width:157px;height:157px;border:4px solid #081221;border-radius:50%;background:var(--hero-accent);box-shadow:0 0 0 8px #ffffff25;z-index:-1}
+  .heroStage:after{content:"";position:absolute;width:185px;height:185px;border:2px dashed #ffffff66;border-radius:50%;z-index:-1;transform:rotate(20deg)}
+  #heroPreview{width:300px;max-width:100%;height:210px;object-fit:contain}
+  #heroTry{position:absolute;right:0;bottom:7px;background:#071c5599;border:2px solid #a9deff;border-radius:12px;color:#fff;padding:8px 11px;font-size:12px;font-weight:800}
+  .heroIdentity{text-align:center;margin:0 0 12px}.heroIdentity h3{margin:0;font-size:28px;font-weight:1000;color:var(--hero-accent);-webkit-text-stroke:4px #081221;paint-order:stroke fill}.heroIdentity p{font-size:12px;margin:5px 0 0;color:#fff}
+  #heroGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .heroCard{position:relative;min-width:0;padding:4px 6px 8px;border:3px solid #081221;border-radius:18px;background:linear-gradient(145deg,var(--card-color),#c8e7ff);box-shadow:inset 0 0 0 1px #ffffff70;color:#fff;transition:transform .12s;overflow:hidden}
+  .heroCard canvas{width:100%;height:82px;object-fit:contain;pointer-events:none}.heroCard strong{font-size:15px;font-weight:1000;-webkit-text-stroke:3px #081221;paint-order:stroke fill}.heroCard[aria-pressed="true"]{box-shadow:inset 0 0 0 3px #fff,0 0 0 2px #f4ff71;transform:translateY(-2px)}
+  .heroCard[aria-pressed="true"]:after{content:"✓";position:absolute;right:7px;top:6px;display:grid;place-items:center;width:23px;height:23px;border:2px solid #081221;border-radius:50%;background:#c9ff46;color:#081221;font-weight:1000}
+  .heroCard:disabled{opacity:.4}.heroCard:disabled:after{content:"読込不可";position:absolute;inset:35% 0 auto;color:#fff;background:#071423;font-size:12px}
+  #heroConfirm{display:block;width:100%;margin-top:15px;border:3px solid #081221;border-radius:16px;padding:13px 10px;background:#baff3d;box-shadow:inset 0 0 0 2px #edffb8;color:#081221;font-size:18px;font-weight:1000}
+  .heroNote{text-align:center;margin:9px 0 0;font-size:11px;color:#d7ecff}
+  @media(max-height:700px){#heroOv{padding-top:calc(env(safe-area-inset-top) + 12px);padding-bottom:calc(env(safe-area-inset-bottom) + 12px)}.heroStage{height:160px}#heroPreview{height:160px;width:250px}.heroStage:before{width:120px;height:120px}.heroStage:after{width:144px;height:144px}.heroCard canvas{height:67px}.heroIdentity{margin-bottom:10px}.heroIdentity h3{font-size:24px}#heroConfirm{margin-top:12px;padding:10px}#heroOpen{min-height:72px;margin-top:10px}#heroOpen canvas{width:78px;height:58px}}
+  @media(max-height:590px){.heroHeading h2{font-size:21px}.heroStage{height:130px}#heroPreview{height:130px;width:210px}.heroStage:before{width:100px;height:100px}.heroStage:after{width:120px;height:120px}.heroCard canvas{height:55px}.heroIdentity h3{font-size:23px}.heroIdentity{margin-bottom:8px}.heroNote{margin-top:6px}.heroCard{padding-bottom:5px}}
+
 </style>
 </head>
 <body>
@@ -139,10 +166,20 @@
 <div class="overlay" id="startOv">
   <span class="eyebrow">MOVE WITH THE BEAT</span>
   <h1>NEON <b>BLADE</b></h1>
-  <div class="titleArt"><img src="img/char_idle.png" alt="シアンの剣を持った主人公"></div>
+  <button id="heroOpen" disabled><canvas id="heroMini" width="240" height="180" aria-hidden="true"></canvas><span><small>CHARACTER</small><strong id="heroCurrent">ネオン</strong></span><b>変更 ↗</b></button>
   <p id="loadTxt">読み込み中…</p>
   <div id="songList"></div>
   <p>まずは迫るノーツをブレイク。<br>すき間を見つけて、進もう。</p>
+</div>
+<div class="overlay hide" id="heroOv" role="dialog" aria-modal="true" aria-labelledby="heroHeading">
+  <div class="heroPanel">
+    <div class="heroHeading"><button id="heroBack" aria-label="変更せずに戻る">‹</button><h2 id="heroHeading">キャラクター</h2></div>
+    <div class="heroStage"><canvas id="heroPreview" width="600" height="420" aria-hidden="true"></canvas><button id="heroTry">斬ってみる</button></div>
+    <div class="heroIdentity" aria-live="polite"><h3 id="heroName">ネオン</h3><p id="heroTag"></p></div>
+    <div id="heroGrid" role="group" aria-label="キャラクターを選ぶ"></div>
+    <button id="heroConfirm">このキャラで遊ぶ</button>
+    <p class="heroNote">どのキャラも同じ強さ</p>
+  </div>
 </div>
 <div class="overlay hide" id="clearOv"><div class="resultMark">◇</div><h2 class="resultTitle">CLEAR</h2><div class="result" id="clearTxt"></div><button class="ovBtn" data-retry>もう一回</button><button class="ovBtn sub" data-select>曲えらび</button></div>
 <div class="overlay hide" id="overOv"><div class="resultMark">⌁</div><h2 class="resultTitle">GAME OVER</h2><div class="result" id="overTxt"></div><button class="ovBtn" data-retry>もう一回</button><button class="ovBtn sub" data-select>曲えらび</button></div>
@@ -191,6 +228,90 @@ const EXIT_INDEX = path.length - 1;
 const IMG = {};
 const imgList = ['char_idle.png','char_move.png','char_slash.png','char_damage.png'];
 function loadImg(n){return new Promise(res=>{const i=new Image();i.onload=()=>res();i.onerror=()=>res();i.src='img/'+n;IMG[n.split('.')[0]]=i;});}
+
+// 見た目だけの選択。HP・移動・判定にはキャラ別の変更を加えない。
+const CHARACTERS=[
+  {id:'ninja',name:'ネオン',tag:'光の刃を振るう忍者',accent:'#42eaff',dark:'#075bc9'},
+  {id:'volt',name:'ボルト',tag:'雷の刃を持つ小さな剣士',accent:'#ffe63d',dark:'#008edb',atlas:'img/characters/volt.webp',poses:[{ax:.67,foot:.93,bodyH:.82},{ax:.61,foot:.93,bodyH:.78},{ax:.68,foot:.84,bodyH:.76},{ax:.63,foot:.86,bodyH:.76}]},
+  {id:'prism',name:'プリズム',tag:'澄んだ結晶の刃を持つ剣士',accent:'#83ffe4',dark:'#00a6a5',atlas:'img/characters/prism.webp',poses:[{ax:.66,foot:.93,bodyH:.78},{ax:.61,foot:.93,bodyH:.78},{ax:.67,foot:.81,bodyH:.74},{ax:.64,foot:.82,bodyH:.73}]},
+  {id:'echo',name:'エコー',tag:'音の刃を響かせる剣士',accent:'#ff57d6',dark:'#a91ced',atlas:'img/characters/echo.webp',poses:[{ax:.65,foot:.91,bodyH:.75},{ax:.60,foot:.91,bodyH:.75},{ax:.66,foot:.84,bodyH:.71},{ax:.63,foot:.85,bodyH:.70}]}
+];
+const HERO_STORAGE='neon-blade-character';
+const heroImages={},heroLoads={};
+let selectedHero='ninja',previewHero='ninja',heroPoseTimer=null;
+try{const saved=localStorage.getItem(HERO_STORAGE);if(CHARACTERS.some(h=>h.id===saved))selectedHero=saved;}catch(e){}
+const heroInfo=(id=selectedHero)=>CHARACTERS.find(h=>h.id===id)||CHARACTERS[0];
+function loadHero(h){
+  if(!h.atlas)return Promise.resolve(true);
+  if(heroLoads[h.id])return heroLoads[h.id];
+  return heroLoads[h.id]=new Promise(resolve=>{
+    const im=new Image();let done=false;
+    const finish=ok=>{if(done)return;done=true;clearTimeout(timer);im.onload=im.onerror=null;if(ok)heroImages[h.id]=im;resolve(ok);};
+    const timer=setTimeout(()=>finish(false),12000);
+    im.onload=()=>finish(im.naturalWidth>0);im.onerror=()=>finish(false);im.src=h.atlas;
+  });
+}
+function heroFrame(id,pose='idle'){
+  const im=heroImages[id],n=Math.max(0,['idle','move','slash','damage'].indexOf(pose));
+  if(!im)return null;
+  return{im,n,sx:n%2*im.naturalWidth/2,sy:Math.floor(n/2)*im.naturalHeight/2,w:im.naturalWidth/2,h:im.naturalHeight/2};
+}
+function renderHeroCanvas(canvas,id,pose='idle'){
+  const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+  c.clearRect(0,0,w,h);
+  const frame=heroFrame(id,pose);
+  if(frame){
+    const size=Math.min(w,h*1.1);
+    c.drawImage(frame.im,frame.sx,frame.sy,frame.w,frame.h,(w-size)/2,(h-size)/2,size,size);
+  }else{
+    const im=IMG['char_'+pose];if(!im||!im.naturalWidth)return;
+    const scale=Math.min(w*.9/im.naturalWidth,h*.83/im.naturalHeight),iw=im.naturalWidth*scale,ih=im.naturalHeight*scale;
+    c.drawImage(im,(w-iw)/2,(h-ih)/2,iw,ih);
+  }
+}
+function updateHeroMenu(){
+  const h=heroInfo();document.getElementById('heroCurrent').textContent=h.name;
+  document.getElementById('heroOpen').setAttribute('aria-label',`キャラクター変更。現在は${h.name}`);
+  renderHeroCanvas(document.getElementById('heroMini'),selectedHero);
+}
+function previewCharacter(id){
+  clearTimeout(heroPoseTimer);previewHero=id;
+  const h=heroInfo(id),ov=document.getElementById('heroOv');
+  ov.style.setProperty('--hero-accent',h.accent);ov.style.setProperty('--hero-dark',h.dark);
+  document.getElementById('heroName').textContent=h.name;document.getElementById('heroTag').textContent=h.tag;
+  document.querySelectorAll('.heroCard').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.hero===id)));
+  renderHeroCanvas(document.getElementById('heroPreview'),id);
+}
+function closeHeroPicker(confirm){
+  clearTimeout(heroPoseTimer);
+  if(confirm){selectedHero=previewHero;try{localStorage.setItem(HERO_STORAGE,selectedHero);}catch(e){}updateHeroMenu();}
+  document.getElementById('heroOv').classList.add('hide');document.getElementById('startOv').classList.remove('hide');
+  document.getElementById('heroOpen').focus({preventScroll:true});
+}
+function initHeroPicker(){
+  if(selectedHero!=='ninja'&&!heroImages[selectedHero])selectedHero='ninja';
+  const grid=document.getElementById('heroGrid');
+  for(const h of CHARACTERS){
+    const b=document.createElement('button');b.className='heroCard';b.dataset.hero=h.id;b.style.setProperty('--card-color',h.accent);
+    b.setAttribute('aria-pressed','false');b.setAttribute('aria-label',h.name+'を試着');
+    const c=document.createElement('canvas');c.width=360;c.height=190;c.setAttribute('aria-hidden','true');
+    const label=document.createElement('strong');label.textContent=h.name;b.append(c,label);
+    b.disabled=h.id!=='ninja'&&!heroImages[h.id];b.addEventListener('click',()=>previewCharacter(h.id));grid.append(b);renderHeroCanvas(c,h.id);
+  }
+  updateHeroMenu();document.getElementById('heroOpen').disabled=false;
+}
+document.getElementById('heroOpen').addEventListener('click',()=>{
+  if(state!=='ready'||pickingSong)return;
+  previewCharacter(selectedHero);document.getElementById('startOv').classList.add('hide');document.getElementById('heroOv').classList.remove('hide');
+  document.getElementById('heroBack').focus({preventScroll:true});
+});
+document.getElementById('heroBack').addEventListener('click',()=>closeHeroPicker(false));
+document.getElementById('heroConfirm').addEventListener('click',()=>closeHeroPicker(true));
+document.getElementById('heroTry').addEventListener('click',()=>{
+  clearTimeout(heroPoseTimer);renderHeroCanvas(document.getElementById('heroPreview'),previewHero,'slash');
+  heroPoseTimer=setTimeout(()=>renderHeroCanvas(document.getElementById('heroPreview'),previewHero),220);
+});
+document.getElementById('heroOv').addEventListener('keydown',e=>{if(e.key==='Escape')closeHeroPicker(false);});
 
 // ===== 音 =====
 let ctx, songBuf, breakBuf, moveBuf, songSrc = null, songGain = null;
@@ -658,7 +779,7 @@ function draw(t){
     if(f.type==='ghost'){
       g.globalAlpha=.28*(1-k);g.translate(p.x,p.y);if(f.flip)g.scale(-1,1);drawPose('move',0,0);
     }else if(f.type==='spark'){
-      g.strokeStyle='#91eff6';g.lineWidth=1;const sz=cell*(.6+.35*k);rr(g,p.x-sz/2,p.y-sz/2,sz,sz,3);g.stroke();
+      g.strokeStyle=heroInfo().accent;g.lineWidth=1;const sz=cell*(.6+.35*k);rr(g,p.x-sz/2,p.y-sz/2,sz,sz,3);g.stroke();
     }else if(f.type==='goal'){
       g.strokeStyle='#ffe3a2';g.lineWidth=2;g.beginPath();g.arc(p.x,p.y,cell*(.3+1.5*k),0,Math.PI*2);g.stroke();
     }
@@ -690,7 +811,7 @@ function draw(t){
   // 切断線はノーツと破片の手前に一瞬だけ表示する。
   for(const f of fx.filter(f=>f.type==='cut')){
     const k=Math.max(0,(t-f.t)/f.d),p=cellXY(f.idx),r=cell*.62;
-    g.save();g.globalAlpha=1-k;g.strokeStyle='#d8fcff';g.lineWidth=2;g.shadowColor='#6debf6';g.shadowBlur=7;
+    g.save();g.globalAlpha=1-k;g.strokeStyle='#d8fcff';g.lineWidth=2;g.shadowColor=heroInfo().accent;g.shadowBlur=7;
     g.beginPath();g.moveTo(p.x-r,p.y+r*.72);g.lineTo(p.x+r,p.y-r*.72);g.stroke();g.restore();
   }
   drawChar(t);
@@ -742,6 +863,13 @@ const POSE = {
 const CHAR_H = 0.98;   // 体の高さ（マス比）
 const glowChar = { idle: true };
 function drawPose(k, x, y){
+  if(selectedHero!=='ninja'){
+    const f=heroFrame(selectedHero,k);
+    if(f){
+      const P=heroInfo().poses[f.n],h=cell*CHAR_H/P.bodyH,w=h*f.w/f.h;
+      g.drawImage(f.im,f.sx,f.sy,f.w,f.h,x-w*P.ax,y+cell*.47-h*P.foot,w,h);return;
+    }
+  }
   const im = IMG['char_' + k], P = POSE[k];
   if (!im || !im.naturalWidth) return;
   const h = cell * CHAR_H / P.bodyH, w = h * im.width / im.height;
@@ -844,11 +972,11 @@ async function pickSong(sg, btn){
   layout();
   ctx = new (window.AudioContext || window.webkitAudioContext)();
   setSong(SONGS[0]);
-  const [seAB] = await Promise.all([loadAudio('audio/break.mp3').catch(() => null), ...imgList.map(loadImg)]);
+  const [seAB] = await Promise.all([loadAudio('audio/break.mp3').catch(() => null), ...imgList.map(loadImg), ...CHARACTERS.map(loadHero)]);
   if (seAB) try { breakBuf = await ctx.decodeAudioData(seAB); } catch(e) {}
   loadAudio('audio/block_move.mp3').then(ab => ctx.decodeAudioData(ab)).then(b => moveBuf = b).catch(() => {});
   loadAudio('audio/goal.mp3').then(ab => ctx.decodeAudioData(ab)).then(b => goalBuf = b).catch(() => {});
-  reset(); layout();
+  initHeroPicker();reset(); layout();
   state = 'ready';
   document.getElementById('loadTxt').textContent = '曲をえらんでスタート';
   const list = document.getElementById('songList');
