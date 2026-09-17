@@ -377,6 +377,7 @@ function draw(t){
   g.save(); g.translate(sx, sy);
 
   g.drawImage(staticCv, 0, 0, cell * COLS, cell * ROWS);
+  drawLockedArea(t);
   drawLineAndG(t);
 
   // 足元のリング（拍でドクッと光る）
@@ -412,11 +413,16 @@ function draw(t){
     const p = cellXY(tween(nt.from, nt.idx, nt.at, t));
     const pop = nt.pop ? Math.min(1, Math.max(0, (t - nt.pop) / 0.2)) : 1;
     const body = cell * .96 * pop, sz = body * BLOCK_SCALE;
-    g.drawImage(IMG.block, p.x - sz / 2, p.y - sz / 2, sz, sz);
+    // 1マス進むごとに180°回転（0.2秒でクルッと回って止まる）
+    const rk = nt.at > -9 && nt.from !== nt.idx ? Math.min(1, Math.max(0, (t - nt.at) / 0.2)) : 1;
+    const ang = (1 - Math.pow(1 - rk, 3)) * Math.PI;
+    g.save(); g.translate(p.x, p.y); if (rk < 1) g.rotate(ang);
+    g.drawImage(IMG.block, -sz / 2, -sz / 2, sz, sz);
     if (nt === nearest && pop === 1){
-      g.save(); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 2;
-      g.strokeRect(p.x - body / 2 + 2, p.y - body / 2 + 2, body - 4, body - 4); g.restore();
+      g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 2;
+      g.strokeRect(-body / 2 + 2, -body / 2 + 2, body - 4, body - 4);
     }
+    g.restore();
   }
   // 壊れたブロック
   effects = effects.filter(e => t - e.t < 0.3);
@@ -444,6 +450,20 @@ function edgeLine(i){
   if (!b) return null;
   if (a.r === b.r){ const x = Math.max(a.c, b.c) * cell; return [x, a.r * cell + 4, x, (a.r + 1) * cell - 4]; }
   const y = Math.max(a.r, b.r) * cell; return [a.c * cell + 4, y, (a.c + 1) * cell - 4, y];
+}
+// まだ解放されてないエリア（今のラインより先）を暗くする。解放されたらフワッと明るくなる
+function drawLockedArea(t){
+  const cur = LINES[lineK], prev = lineK > 0 ? LINES[lineK - 1] : -1;
+  const fade = Math.min(1, Math.max(0, (t - gMoveAt) / 0.45));
+  for (let i = 0; i < path.length; i++){
+    let a = 0;
+    if (i > cur) a = .5;
+    else if (i > prev && lineK > 0 && fade < 1) a = .5 * (1 - fade);
+    if (a <= 0) continue;
+    const c = path[i];
+    g.fillStyle = `rgba(6,22,56,${a})`;
+    g.fillRect(c.c * cell, c.r * cell, cell, cell);
+  }
 }
 function drawLineAndG(t){
   const last = lineK === LINES.length - 1;
