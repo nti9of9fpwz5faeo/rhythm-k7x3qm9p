@@ -283,6 +283,7 @@ function previewCharacter(id){
   renderHeroCanvas(document.getElementById('heroPreview'),id);
 }
 function closeHeroPicker(confirm){
+  stopPreviewSE();
   clearTimeout(heroPoseTimer);
   if(confirm){selectedHero=previewHero;try{localStorage.setItem(HERO_STORAGE,selectedHero);}catch(e){}updateHeroMenu();}
   document.getElementById('heroOv').classList.add('hide');document.getElementById('startOv').classList.remove('hide');
@@ -307,15 +308,35 @@ document.getElementById('heroOpen').addEventListener('click',()=>{
 });
 document.getElementById('heroBack').addEventListener('click',()=>closeHeroPicker(false));
 document.getElementById('heroConfirm').addEventListener('click',()=>closeHeroPicker(true));
-document.getElementById('heroTry').addEventListener('click',()=>{
+document.getElementById('heroTry').addEventListener('click',async()=>{
   clearTimeout(heroPoseTimer);renderHeroCanvas(document.getElementById('heroPreview'),previewHero,'slash');
   heroPoseTimer=setTimeout(()=>renderHeroCanvas(document.getElementById('heroPreview'),previewHero),220);
+  const id=previewHero;
+  try{
+    if(ctx.state==='suspended')await ctx.resume();
+    if(document.getElementById('heroOv').classList.contains('hide')||previewHero!==id)return;
+    stopPreviewSE();previewBreakVoice=playSE('GREAT',id);
+  }catch(e){}
 });
 document.getElementById('heroOv').addEventListener('keydown',e=>{if(e.key==='Escape')closeHeroPicker(false);});
 
 // ===== 音 =====
 let ctx, songBuf, breakBuf, moveBuf, songSrc = null, songGain = null;
 const bufCache = {};
+const CHARACTER_SE={
+  volt:{file:'audio/break_volt.mp3',gain:.45},
+  prism:{file:'audio/break_prism.mp3',gain:.60},
+  echo:{file:'audio/break_echo.mp3',gain:1.0}
+};
+const characterBreakBuffers={};
+let previewBreakVoice=null;
+function stopPreviewSE(){if(previewBreakVoice){try{previewBreakVoice.stop();}catch(e){}previewBreakVoice=null;}}
+async function loadCharacterSE(){
+  await Promise.all(Object.entries(CHARACTER_SE).map(async([id,sfx])=>{
+    try{characterBreakBuffers[id]=await ctx.decodeAudioData(await loadAudio(sfx.file));}
+    catch(e){/* 読み込めないキャラだけ既存のブレイク音へ戻す。 */}
+  }));
+}
 async function loadAudio(url){const r=await fetch(url);if(!r.ok)throw new Error(`Audio ${r.status}`);return await r.arrayBuffer();}
 
 // ===== 画面 =====
@@ -556,24 +577,29 @@ function input(type){
 
 // 判定で音を変える：PERFECT＝キーン付きで派手、GREAT＝ふつう、GOOD＝こもった小さめ
 // ブロックが動く音（毎拍なので小さめ。拍ぴったりの時刻に予約して鳴らす）
-const MOVE_SE_VOL = 0.35;
+const MOVE_SE_VOL = 0.22;
 function playMoveSE(n){
   if (!moveBuf || state !== 'play') return;
   const src = ctx.createBufferSource(), gn = ctx.createGain();
   src.buffer = moveBuf; gn.gain.value = MOVE_SE_VOL;
   src.connect(gn); gn.connect(ctx.destination);
+  src.onended=()=>{src.disconnect();gn.disconnect();};
   src.start(Math.max(ctx.currentTime, songStart + beatTime(n)));
 }
-function playSE(word){
-  if (!breakBuf) return;
+function playSE(word,heroId=selectedHero){
+  const custom=characterBreakBuffers[heroId],buffer=custom||breakBuf;
+  if (!buffer) return null;
   const now = ctx.currentTime;
-  const src = ctx.createBufferSource(); src.buffer = breakBuf;
+  const src = ctx.createBufferSource(); src.buffer = buffer;
   const gain = ctx.createGain(), filt = ctx.createBiquadFilter(); filt.type = 'lowpass';
   if (word === 'PERFECT'){ src.playbackRate.value = 1.08; filt.frequency.value = 20000; gain.gain.value = 1.0; }
   else if (word === 'GREAT'){ src.playbackRate.value = 1.0; filt.frequency.value = 12000; gain.gain.value = 0.85; }
   else { src.playbackRate.value = 0.9; filt.frequency.value = 1800; gain.gain.value = 0.6; }
-  src.connect(filt); filt.connect(gain); gain.connect(ctx.destination); src.start(now);
-  if (word === 'PERFECT'){
+  if(custom)gain.gain.value*=CHARACTER_SE[heroId].gain;
+  src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+  src.onended=()=>{src.disconnect();filt.disconnect();gain.disconnect();if(previewBreakVoice===src)previewBreakVoice=null;};
+  src.start(now);
+  if (word === 'PERFECT' && !custom){
     // キラーンという高い音を重ねる
     for (const [f, v] of [[2093, .18], [3136, .12], [4186, .07]]){
       const o = ctx.createOscillator(), og = ctx.createGain();
@@ -583,6 +609,7 @@ function playSE(word){
       o.connect(og); og.connect(ctx.destination); o.start(now + .02); o.stop(now + .5);
     }
   }
+  return src;
 }
 
 function resultLine(){
@@ -972,9 +999,9 @@ async function pickSong(sg, btn){
   layout();
   ctx = new (window.AudioContext || window.webkitAudioContext)();
   setSong(SONGS[0]);
-  const [seAB] = await Promise.all([loadAudio('audio/break.mp3').catch(() => null), ...imgList.map(loadImg), ...CHARACTERS.map(loadHero)]);
+  const [seAB] = await Promise.all([loadAudio('audio/break.mp3').catch(() => null), ...imgList.map(loadImg), ...CHARACTERS.map(loadHero), loadCharacterSE()]);
   if (seAB) try { breakBuf = await ctx.decodeAudioData(seAB); } catch(e) {}
-  loadAudio('audio/block_move.mp3').then(ab => ctx.decodeAudioData(ab)).then(b => moveBuf = b).catch(() => {});
+  loadAudio('audio/block_move.mp3?v=2').then(ab => ctx.decodeAudioData(ab)).then(b => moveBuf = b).catch(() => {});
   loadAudio('audio/goal.mp3').then(ab => ctx.decodeAudioData(ab)).then(b => goalBuf = b).catch(() => {});
   initHeroPicker();reset(); layout();
   state = 'ready';
