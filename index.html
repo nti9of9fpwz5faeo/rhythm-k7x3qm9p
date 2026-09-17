@@ -144,6 +144,37 @@
   @media(max-height:700px){#heroOv{padding-top:calc(env(safe-area-inset-top) + 12px);padding-bottom:calc(env(safe-area-inset-bottom) + 12px)}.heroStage{height:160px}#heroPreview{height:160px;width:250px}.heroStage:before{width:120px;height:120px}.heroStage:after{width:144px;height:144px}.heroCard canvas{height:67px}.heroIdentity{margin-bottom:10px}.heroIdentity h3{font-size:24px}#heroConfirm{margin-top:12px;padding:10px}#heroOpen{min-height:72px;margin-top:10px}#heroOpen canvas{width:78px;height:58px}}
   @media(max-height:590px){.heroHeading h2{font-size:21px}.heroStage{height:130px}#heroPreview{height:130px;width:210px}.heroStage:before{width:100px;height:100px}.heroStage:after{width:120px;height:120px}.heroCard canvas{height:55px}.heroIdentity h3{font-size:23px}.heroIdentity{margin-bottom:8px}.heroNote{margin-top:6px}.heroCard{padding-bottom:5px}}
 
+  #difficultyPicker{display:flex;width:min(360px,100%);gap:8px;margin:7px 0 0;flex:none}
+  .difficultyBtn{flex:1;min-height:38px;border:3px solid #081221;border-radius:11px;background:#1443ae;color:#fff;font-size:13px;font-weight:900}
+  .difficultyBtn[aria-pressed="true"]{background:#c6ff44;color:#081221;box-shadow:inset 0 0 0 2px #f4ffbf}
+  .difficultyBtn[data-difficulty="hard"][aria-pressed="true"]{background:#ff64cc;color:#081221;box-shadow:inset 0 0 0 2px #ffd7f3}
+  .resultScreen{overflow-y:auto;touch-action:pan-y;justify-content:safe center;padding:calc(env(safe-area-inset-top) + 15px) 18px calc(env(safe-area-inset-bottom) + 15px)}
+  .resultSheet{width:min(420px,100%);flex:none;--result-accent:#40e9ff}
+  .resultHeader{text-align:center}.resultHeader .resultTitle{margin:0;font-size:38px;letter-spacing:.035em;line-height:1.15}
+  .resultSong{font-size:13px;font-weight:900;margin:7px 0 0;color:#fff}.resultDifficulty{display:inline-block;font-size:10px;margin-left:5px;border:2px solid #081221;border-radius:5px;padding:2px 5px;background:#ffdf4d;color:#081221}
+  .resultHero{position:relative;display:flex;align-items:center;justify-content:center;gap:25px;height:150px;margin:5px 0}
+  .resultPortrait{width:170px;position:relative;text-align:center;isolation:isolate}.resultPortrait:before{content:"";position:absolute;width:102px;height:102px;border-radius:50%;background:var(--result-accent);border:3px solid #081221;left:50%;top:3px;transform:translateX(-50%);z-index:-1;box-shadow:0 0 0 5px #ffffff25}
+  .resultPortrait canvas{width:170px;height:119px;object-fit:contain}.resultHeroName{display:block;font-size:15px;font-weight:1000;-webkit-text-stroke:3px #081221;paint-order:stroke fill;margin-top:-6px}
+  .resultRank{position:relative;display:flex;align-items:center;flex-direction:column;justify-content:center;width:104px;height:104px;border:4px solid #081221;border-radius:23px;background:#fff365;box-shadow:inset 0 0 0 3px #ffffc5,0 5px 0 #07142f55;color:#081221;transform:rotate(4deg)}
+  .resultRank small{font-size:11px;font-weight:1000;letter-spacing:.13em}.resultRank strong{font-size:64px;line-height:1;font-weight:1000;letter-spacing:-.07em;margin-left:-4px}
+  #overOv .resultRank{background:#b3b8ef;box-shadow:inset 0 0 0 3px #dde2ff,0 5px 0 #07142f55}
+  .scorePanel{position:relative;background:#1038a8;border:3px solid #081221;border-radius:17px;box-shadow:inset 0 0 0 1px #8acbff;padding:10px 14px;text-align:center}
+  .scoreLabel{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:900;letter-spacing:.12em;color:#c2edff}
+  .newBest{font-size:10px;letter-spacing:.03em;color:#eeff4b;visibility:hidden}.newBest.show{visibility:visible}
+  .scoreValue{display:block;font-size:47px;line-height:1.2;font-weight:1000;letter-spacing:.025em;font-variant-numeric:tabular-nums;color:#f0ff66;-webkit-text-stroke:3px #081221;paint-order:stroke fill}
+  .bestValue{font-size:11px;color:#d5eaff;font-weight:800;font-variant-numeric:tabular-nums}
+  .resultStats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:9px 0}
+  .resultStat{border:3px solid #081221;border-radius:12px;background:#1274cb;padding:7px;text-align:center}.resultStat small{display:block;font-size:10px;color:#dcfaff}.resultStat b{display:block;font-size:23px;font-variant-numeric:tabular-nums;line-height:1.2}
+  .judgmentList{margin:0;padding:5px 12px;border:3px solid #081221;border-radius:15px;background:#103aaacc}
+  .judgmentRow{position:relative;display:flex;align-items:center;justify-content:space-between;min-height:35px;padding:3px 4px;border-bottom:1px solid #ffffff25;font-variant-numeric:tabular-nums;isolation:isolate}
+  .judgmentRow:last-child{border-bottom:0}.judgmentRow:before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:var(--portion,0%);max-width:100%;background:var(--tone);opacity:.12;border-radius:5px;z-index:-1}
+  .judgmentRow dt{font-size:14px;font-weight:1000;letter-spacing:.025em;color:var(--tone);-webkit-text-stroke:2px #081221;paint-order:stroke fill}.judgmentRow dd{margin:0;font-size:21px;font-weight:1000;color:#fff}.judgmentRow dd small{font-size:10px;margin-left:5px;color:#baddff}
+  .resultFoot{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:800;margin:9px 2px;color:#fff}
+  .resultBadge{color:#f1ff54}.resultActions{display:grid;grid-template-columns:1.2fr 1fr;gap:10px}.resultActions .ovBtn,.resultActions .ovBtn.sub{min-width:0;width:100%;margin:0;padding:12px 4px;font-size:15px;border-radius:14px}
+  .scoreHelp{margin-top:10px;color:#d9edff;font-size:10px;line-height:1.6}.scoreHelp summary{cursor:pointer;text-align:center;min-height:22px}.scoreHelp p{margin:7px 0;padding:8px 10px;border:1px solid #78b7ff;border-radius:8px;background:#103aaacc}
+  @media(max-height:710px){.resultHero{height:114px;gap:15px}.resultPortrait{width:146px}.resultPortrait canvas{width:146px;height:95px}.resultPortrait:before{width:78px;height:78px}.resultRank{width:87px;height:87px;border-radius:19px}.resultRank strong{font-size:53px}.resultHeader .resultTitle{font-size:32px}.scoreValue{font-size:39px}.scorePanel{padding:7px 12px}.resultStats{margin:7px 0}.resultStat{padding:4px}.resultStat b{font-size:20px}.judgmentRow{min-height:31px}.scoreHelp{margin-top:6px}}
+  @media(max-height:590px){.resultScreen{padding-top:calc(env(safe-area-inset-top) + 9px);padding-bottom:calc(env(safe-area-inset-bottom) + 9px)}.resultHeader .resultTitle{font-size:28px}.resultSong{margin-top:4px;font-size:11px}.resultHero{height:92px;margin:2px 0}.resultPortrait canvas{height:79px;width:132px}.resultPortrait{width:132px}.resultPortrait:before{width:65px;height:65px}.resultHeroName{font-size:12px;margin-top:-4px}.resultRank{height:72px;width:72px;border-radius:16px}.resultRank strong{font-size:42px}.resultRank small{font-size:9px}.scoreValue{font-size:34px}.scorePanel{padding:5px 10px}.resultStats{margin:6px 0}.resultStat small{font-size:9px}.judgmentRow{min-height:28px}.judgmentRow dt{font-size:12px}.judgmentRow dd{font-size:18px}.resultFoot{font-size:10px;margin:6px 1px}.resultActions .ovBtn,.resultActions .ovBtn.sub{padding:9px 3px}.scoreHelp{margin-top:5px}}
+
 </style>
 </head>
 <body>
@@ -168,6 +199,7 @@
   <h1>NEON <b>BLADE</b></h1>
   <button id="heroOpen" disabled><canvas id="heroMini" width="240" height="180" aria-hidden="true"></canvas><span><small>CHARACTER</small><strong id="heroCurrent">ネオン</strong></span><b>変更 ↗</b></button>
   <p id="loadTxt">読み込み中…</p>
+  <div id="difficultyPicker" role="group" aria-label="難易度"><button class="difficultyBtn" data-difficulty="normal" aria-pressed="true">NORMAL</button><button class="difficultyBtn" data-difficulty="hard" aria-pressed="false">HARD</button></div>
   <div id="songList"></div>
   <p>まずは迫るノーツをブレイク。<br>すき間を見つけて、進もう。</p>
 </div>
@@ -193,8 +225,11 @@ const SONGS = [
   { name: 'Bass Arcade',         file: 'audio/bass_arcade.mp3', bpm: 134.4, offset: 0.085, level: 'むずかしい', hard: true, dense: true },
   { name: 'Frostbite Breakbeat', file: 'audio/frostbite.mp3', bpm: 129.9, offset: 0.21, level: 'クール', hard: true },
 ];
+let difficulty='normal';
+try{if(localStorage.getItem('neon-blade-difficulty')==='hard')difficulty='hard';}catch(e){}
+const DIFFICULTIES={normal:{maxRun:4,gaps:[1,1,2,2,3],dense:[1,1,1,2,3]},hard:{maxRun:6,gaps:[1,1,1,2,2,3],dense:[1,1,1,1,2,3]}};
 let song = SONGS[0], BPM, OFFSET, SPB, WINDOW;
-function setSong(sg){ song = sg; GAPS = sg.dense ? GAPS_DENSE : GAPS_NORMAL; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.17, SPB * 0.36); }
+function setSong(sg){ song = sg; GAPS = sg.dense ? DIFFICULTIES[difficulty].dense : DIFFICULTIES[difficulty].gaps; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.17, SPB * 0.36); }
 const COLS = 8, ROWS = 11;
 const MAX_HP = 5;
 // チェックポイント（破線）。着いたら解除されて、Gが次の場所へ移動
@@ -391,6 +426,7 @@ let lastBeatAt = -9, damageAt = -9;
 let moveLocked = true; // 最初のブロックを壊すまで進めない
 
 function reset(){
+  finishedRun=null;runHeroId=selectedHero;runDifficulty=difficulty;
   clearTimeout(resultTimer);resultTimer=null;victoryAt=-1;
   document.getElementById('victory').classList.add('hide');
   document.querySelectorAll('#controls button').forEach(b=>b.disabled=false);
@@ -435,21 +471,24 @@ function songTime(){
 }
 function beatTime(n){ return OFFSET + n * SPB; }
 
-// 4拍ごとのブロックの出し方
-// ブロックの間隔（マス数）。3以上＝あいだに必ず2マス空く → 壊したら必ず1歩進める
-// 1＝くっついて連続で来る、2＝1マスあき、3＝2マスあき…
-const GAPS_NORMAL = [1, 2, 2, 3, 3, 4];
-const GAPS_DENSE  = [1, 1, 2, 2, 3];
-const MAX_RUN = 3;   // 連続で来るのは最大3個まで。そのあとは必ず2マス以上あける
-let GAPS = GAPS_NORMAL, PATTERNS = null, curPattern = null;
-let nextGap = 4;
-let runLen = 1;
+// ノーツ密度を上げ、連続ノーツの後には進める間隔を必ず作る。
+let GAPS=DIFFICULTIES.normal.gaps;
+let nextGap=4,runLen=1;
 function pickGap(){
-  let gp = GAPS[Math.floor(rand() * GAPS.length)];
-  if (gp === 1 && runLen >= MAX_RUN) gp = 3;   // 連続しすぎたら休憩
-  runLen = gp === 1 ? runLen + 1 : 1;
+  let gp=GAPS[Math.floor(rand()*GAPS.length)];
+  if(runLen>=DIFFICULTIES[difficulty].maxRun)gp=3;
+  runLen=gp===1?runLen+1:1;
   return gp;
 }
+function updateDifficultyUI(){
+  document.querySelectorAll('[data-difficulty]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.difficulty===difficulty)));
+}
+document.querySelectorAll('[data-difficulty]').forEach(b=>b.addEventListener('click',()=>{
+  if(state!=='ready'||pickingSong)return;
+  difficulty=b.dataset.difficulty;setSong(song);updateDifficultyUI();
+  try{localStorage.setItem('neon-blade-difficulty',difficulty);}catch(e){}
+}));
+updateDifficultyUI();
 
 function onBeat(n, t){
   // ブロックが1マス迫る（最初の数拍は止まってる）
@@ -612,9 +651,67 @@ function playSE(word,heroId=selectedHero){
   return src;
 }
 
-function resultLine(){
-  return `PERFECT ${counts.PERFECT}　GREAT ${counts.GREAT}　GOOD ${counts.GOOD}　MISS ${counts.MISS}<br>最大コンボ ${maxCombo}`;
+// 1,000,000点満点。判定精度×コース到達率。MISSは従来どおり入力ミスも含む。
+const SCORE_MAX=1000000;
+const JUDGMENT_WEIGHT={PERFECT:1,GREAT:.8,GOOD:.5,MISS:0};
+let runHeroId='ninja',runDifficulty='normal',finishedRun=null;
+function calculateResult(judgments,progress,clear){
+  const total=Object.keys(JUDGMENT_WEIGHT).reduce((n,k)=>n+judgments[k],0);
+  const weighted=Object.keys(JUDGMENT_WEIGHT).reduce((n,k)=>n+judgments[k]*JUDGMENT_WEIGHT[k],0);
+  const accuracy=total?weighted/total:0;
+  const score=Math.max(0,Math.min(SCORE_MAX,Math.round(SCORE_MAX*accuracy*Math.max(0,Math.min(1,progress)))));
+  const rank=!clear?'—':score>=980000?'S':score>=900000?'A':score>=800000?'B':score>=650000?'C':'D';
+  const badge=clear&&total>0?(judgments.PERFECT===total?'ALL PERFECT':judgments.MISS===0?'FULL COMBO':'STAGE CLEAR'):'';
+  return{total,accuracy,score,rank,badge};
 }
+function captureResult(clear){
+  const judgments={...counts},progress=Math.min(1,player.idx/GOAL_INDEX);
+  const result={...calculateResult(judgments,progress,clear),counts:judgments,progress,clear,heroId:runHeroId,difficulty:runDifficulty,songName:song.name,hp:Math.max(0,hp),maxCombo,seconds:Math.max(0,songTime()),beats:Math.max(0,nextBeat)};
+  const key=`neon-blade-best-v1:${song.file}:${runDifficulty}`;
+  let previous=0;
+  try{const v=Number(localStorage.getItem(key));if(Number.isInteger(v)&&v>=0&&v<=SCORE_MAX)previous=v;}catch(e){}
+  result.newBest=clear&&result.score>previous;
+  result.best=result.newBest?result.score:previous;
+  if(result.newBest){try{localStorage.setItem(key,String(result.score));}catch(e){}}
+  return result;
+}
+function resultMarkup(prefix,clear){
+  return `<div class="resultSheet">
+    <header class="resultHeader"><h2 class="resultTitle">${clear?'CLEAR!':'GAME OVER'}</h2><p class="resultSong"><span data-result-song></span><span class="resultDifficulty" data-result-difficulty></span></p></header>
+    <div class="resultHero"><div class="resultPortrait"><canvas id="${prefix}Hero" width="400" height="280" aria-hidden="true"></canvas><strong class="resultHeroName" data-result-hero></strong></div><div class="resultRank" aria-label="ランク"><small>RANK</small><strong data-result-rank></strong></div></div>
+    <div class="scorePanel"><div class="scoreLabel"><span>SCORE / 1,000,000</span><span class="newBest" data-result-new>NEW BEST!</span></div><strong class="scoreValue" data-result-score>0</strong><div class="bestValue">自己ベスト <span data-result-best>0</span></div></div>
+    <div class="resultStats"><div class="resultStat"><small>判定精度</small><b data-result-accuracy></b></div><div class="resultStat"><small>最大コンボ</small><b data-result-combo></b></div></div>
+    <dl class="judgmentList" aria-label="判定の内訳">${[['PERFECT','#fff064'],['GREAT','#5de8ff'],['GOOD','#bcff66'],['MISS','#ff93b6']].map(([k,col])=>`<div class="judgmentRow" data-judgment="${k}" style="--tone:${col}"><dt>${k}</dt><dd><span>0</span><small>回</small></dd></div>`).join('')}</dl>
+    <div class="resultFoot"><span class="resultBadge" data-result-badge></span><span data-result-foot></span></div>
+    <div class="resultActions"><button class="ovBtn" data-retry>もう一回</button><button class="ovBtn sub" data-select>曲えらび</button></div>
+    <details class="scoreHelp"><summary>スコアのしくみ</summary><p>判定精度 × 到達率 × 1,000,000点。PERFECT=100%、GREAT=80%、GOOD=50%、MISS=0%の平均が判定精度です。MISSは被弾とタイミング外の入力を含みます。<br>クリア時のランク：S 98万 / A 90万 / B 80万 / C 65万点以上。自己ベストは曲・難易度ごとに保存します。</p></details>
+  </div>`;
+}
+function initResultScreens(){
+  for(const [id,clear] of [['clearOv',true],['overOv',false]]){
+    const ov=document.getElementById(id);ov.classList.add('resultScreen');ov.innerHTML=resultMarkup(id,clear);
+  }
+}
+function renderResult(result){
+  const ov=document.getElementById(result.clear?'clearOv':'overOv'),hero=heroInfo(result.heroId);
+  const text=(key,value)=>ov.querySelector(`[data-result-${key}]`).textContent=value;
+  ov.querySelector('.resultSheet').style.setProperty('--result-accent',hero.accent);
+  text('song',result.songName);text('difficulty',result.difficulty.toUpperCase());text('hero',hero.name);
+  text('rank',result.rank);text('score',result.score.toLocaleString('en-US'));text('best',result.best.toLocaleString('en-US'));
+  text('accuracy',(result.accuracy*100).toFixed(2)+'%');text('combo',result.maxCombo);
+  ov.querySelector('[data-result-new]').classList.toggle('show',result.newBest);
+  for(const row of ov.querySelectorAll('[data-judgment]')){
+    const n=result.counts[row.dataset.judgment];row.querySelector('dd span').textContent=n;
+    row.style.setProperty('--portion',(result.total?n/result.total*100:0)+'%');
+  }
+  text('badge',result.clear?result.badge:`到達率 ${Math.floor(result.progress*100)}%`);
+  const seconds=Math.floor(result.seconds),time=`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+  text('foot',`残りHP ${result.hp} / ${time}`);
+  renderHeroCanvas(ov.querySelector('canvas'),result.heroId);
+  ov.querySelector('details').open=false;ov.scrollTop=0;
+}
+initResultScreens();
+
 // 判定は盤面とは別の層で描き、スクロールや画面端でも読める位置に置く。
 function placeJudge(t){
   const el=document.getElementById('judge'),wrap=document.getElementById('fieldWrap');
@@ -658,18 +755,13 @@ function finishResult(clear){
   if(state!==(clear?'clear':'over'))return;
   clearTimeout(resultTimer);resultTimer=null;victoryAt=-1;victory.classList.add('hide');
   if(songSrc){try{songSrc.stop();}catch(e){}}
-  const beats=Math.max(0,nextBeat);
-  if(clear){
-    document.getElementById('clearTxt').innerHTML=`残りHP ${hp} ／ ${beats}拍でゴール<br>${resultLine()}`;
-    document.getElementById('clearOv').classList.remove('hide');
-  }else{
-    document.getElementById('overTxt').innerHTML=`ゴールまであと ${GOAL_INDEX-player.idx} マス<br>${resultLine()}`;
-    document.getElementById('overOv').classList.remove('hide');
-  }
+  if(finishedRun)renderResult(finishedRun);
+  document.getElementById(clear?'clearOv':'overOv').classList.remove('hide');
 }
 function end(clear){
   if(state!=='play')return;
   state=clear?'clear':'over';
+  finishedRun=captureResult(clear);
   document.querySelectorAll('#controls button').forEach(b=>{b.disabled=true;b.classList.remove('press');});
   if(!clear){resultTimer=setTimeout(()=>finishResult(false),500);return;}
   clearTimeout(jTimer);document.getElementById('judge').classList.remove('pop');
