@@ -1055,15 +1055,23 @@ function draw(t){
   const vp=tween(player.from,player.idx,player.at,t);
   for(const nt of notes){
     // スピードが速いほど、自分から遠くに見えて速く迫る（到着の瞬間は同じ）
-    const ln=tween(nt.from,nt.idx,nt.at,t);
+    // ×1.0は「ドクッ」と止まる動き。速くしたときは止まらずなめらかに流れる
+    const smooth=noteSpeed>1&&state!=='ready';
+    let ln=tween(nt.from,nt.idx,nt.at,t);
+    if(smooth){
+      const b0=beatTime(nextBeat-1),b1=beatTime(nextBeat);
+      const frac=nextBeat>=INTRO_BEATS&&b1>b0?Math.min(1,Math.max(0,(t-b0)/(b1-b0))):0;
+      ln=Math.max(player.idx,nt.idx-frac);
+    }
     const vis=ln<=vp?ln:vp+(ln-vp)*noteSpeed;
     if(noteSpeed>1&&vis>gIdx+.5)continue;          // Gより奥はまだ見えない
     const p=cellXY(vis);
     const emerge=noteSpeed>1?Math.min(1,Math.max(0,gIdx+.5-vis)):1; // Gから出てくる
     const pop=(nt.pop!=null?Math.min(1,Math.max(0,(t-nt.pop)/.16)):1)*emerge;
     const body=cell*.93*pop,sz=body*1.25;
-    const rk=nt.at>-9&&nt.from!==nt.idx?Math.min(1,Math.max(0,(t-nt.at)/.2)):1;
-    const ang=(1-Math.pow(1-rk,3))*Math.PI;
+    let rk=nt.at>-9&&nt.from!==nt.idx?Math.min(1,Math.max(0,(t-nt.at)/.2)):1;
+    let ang=(1-Math.pow(1-rk,3))*Math.PI;
+    if(smooth){rk=0;ang=vis*Math.PI*.5;}   // なめらかモードはずっとゆっくり回転
     g.save();g.translate(p.x,p.y);
     if(!reduceMotion.matches&&rk<1)g.rotate(ang);
     const pulse=reduceMotion.matches?0:beatPulse(t)*.025;g.scale(1+pulse,1+pulse);
