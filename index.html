@@ -174,7 +174,7 @@ const imgList = ['char_idle.png','char_move.png','char_slash.png','char_damage.p
 function loadImg(n){return new Promise(res=>{const i=new Image();i.onload=()=>res();i.onerror=()=>res();i.src='img/'+n;IMG[n.split('.')[0]]=i;});}
 
 // ===== 音 =====
-let ctx, songBuf, breakBuf, songSrc = null;
+let ctx, songBuf, breakBuf, moveBuf, songSrc = null;
 const bufCache = {};
 async function loadAudio(url){const r=await fetch(url);if(!r.ok)throw new Error(`Audio ${r.status}`);return await r.arrayBuffer();}
 
@@ -286,7 +286,10 @@ function pickGap(){
 
 function onBeat(n, t){
   // ブロックが1マス迫る（最初の数拍は止まってる）
-  if (n >= INTRO_BEATS) for (const nt of notes){ nt.from = nt.idx; nt.idx -= 1; nt.at = t; }
+  if (n >= INTRO_BEATS && notes.length){
+    for (const nt of notes){ nt.from = nt.idx; nt.idx -= 1; nt.at = t; }
+    playMoveSE(n);
+  }
   // ブロックを出す
   if (n >= INTRO_BEATS){
     const lastIdx = Math.max(-99, ...notes.map(x => x.idx));
@@ -405,6 +408,15 @@ function input(type){
 }
 
 // 判定で音を変える：PERFECT＝キーン付きで派手、GREAT＝ふつう、GOOD＝こもった小さめ
+// ブロックが動く音（毎拍なので小さめ。拍ぴったりの時刻に予約して鳴らす）
+const MOVE_SE_VOL = 0.35;
+function playMoveSE(n){
+  if (!moveBuf || state !== 'play') return;
+  const src = ctx.createBufferSource(), gn = ctx.createGain();
+  src.buffer = moveBuf; gn.gain.value = MOVE_SE_VOL;
+  src.connect(gn); gn.connect(ctx.destination);
+  src.start(Math.max(ctx.currentTime, songStart + beatTime(n)));
+}
 function playSE(word){
   if (!breakBuf) return;
   const now = ctx.currentTime;
@@ -712,6 +724,7 @@ async function pickSong(sg, btn){
   setSong(SONGS[0]);
   const [seAB] = await Promise.all([loadAudio('audio/break.mp3').catch(() => null), ...imgList.map(loadImg)]);
   if (seAB) try { breakBuf = await ctx.decodeAudioData(seAB); } catch(e) {}
+  loadAudio('audio/block_move.mp3').then(ab => ctx.decodeAudioData(ab)).then(b => moveBuf = b).catch(() => {});
   reset(); layout();
   state = 'ready';
   document.getElementById('loadTxt').textContent = '曲をえらんでスタート';
