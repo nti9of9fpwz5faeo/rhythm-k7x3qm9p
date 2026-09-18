@@ -568,14 +568,18 @@ document.querySelectorAll('[data-difficulty]').forEach(b=>b.addEventListener('cl
 updateDifficultyUI();
 
 function onBeat(n, t){
-  // ブロックが1マス迫る（最初の数拍は止まってる）
+  // 赤いブロックが自分のマスに残っている間は、全部その場で足踏み（回るだけ）
+  const frozen = notes.some(nt => nt.hit);
   if (n >= INTRO_BEATS && notes.length){
-    for (const nt of notes){ if (nt.hit) continue; nt.from = nt.idx; nt.idx -= 1; nt.at = t; }
+    for (const nt of notes){
+      nt.from = nt.idx; nt.at = t;
+      if (frozen) nt.spin = t; else { nt.idx -= 1; nt.spin = null; }
+    }
     if(!moveScheduler)playMoveSE(n);
   }
   if(activeChart&&n>=INTRO_BEATS)chartFill(n,t);
   // ブロックを出す
-  if (n >= INTRO_BEATS){
+  if (n >= INTRO_BEATS && !frozen){
     const lastIdx = Math.max(-99, ...notes.map(x => x.idx));
     if (activeChart ? chartSpawns(n)&&lastIdx<gIdx : gIdx - lastIdx >= nextGap){
       notes.push({ id: noteId++, idx: gIdx, from: gIdx, at: t, pop: t, hp: rollHp(gIdx - lastIdx) });
@@ -1098,7 +1102,7 @@ function draw(t){
     const emerge=noteSpeed>1?Math.min(1,Math.max(0,gIdx+.5-vis)):1; // Gから出てくる
     const pop=(nt.pop!=null?Math.min(1,Math.max(0,(t-nt.pop)/.16)):1)*emerge;
     const body=cell*.93*pop,sz=body*1.25;
-    let rk=nt.at>-9&&nt.from!==nt.idx?Math.min(1,Math.max(0,(t-nt.at)/.2)):1;
+    let rk=nt.at>-9&&(nt.from!==nt.idx||nt.spin===nt.at)?Math.min(1,Math.max(0,(t-nt.at)/.2)):1;
     let ang=(1-Math.pow(1-rk,3))*Math.PI;
     if(smooth){rk=0;ang=vis*Math.PI*.5;}   // なめらかモードはずっとゆっくり回転
     g.save();g.translate(p.x,p.y);
