@@ -570,7 +570,7 @@ updateDifficultyUI();
 function onBeat(n, t){
   // ブロックが1マス迫る（最初の数拍は止まってる）
   if (n >= INTRO_BEATS && notes.length){
-    for (const nt of notes){ nt.from = nt.idx; nt.idx -= 1; nt.at = t; }
+    for (const nt of notes){ if (nt.hit) continue; nt.from = nt.idx; nt.idx -= 1; nt.at = t; }
     if(!moveScheduler)playMoveSE(n);
   }
   if(activeChart&&n>=INTRO_BEATS)chartFill(n,t);
@@ -591,7 +591,7 @@ function onBeat(n, t){
 
 function checkHit(t){
   for (const nt of [...notes]){
-    if (nt.idx <= player.idx){
+    if (nt.idx <= player.idx && !nt.hit){
       notes.splice(notes.indexOf(nt), 1);
       damage(t);
     }
@@ -636,6 +636,8 @@ function showJudge(word, sub){
 }
 
 function freeMove(t){
+  const stuck = notes.find(x => x.hit && x.idx <= player.idx);
+  if (stuck){ texts.push({ s: 'もう1回ブレイク！', idx: player.idx, t, col: '#ff5a5a' }); return; }
   if (moveLocked){ texts.push({ s: 'まず1個ブレイク', idx: player.idx, t, col: '#ffffff' }); return; }
   if (player.idx >= GOAL_INDEX) return;
   fx.push({ type: 'ghost', idx: player.idx, t, d: .13, flip: facesRight(player.idx) });
@@ -662,14 +664,13 @@ function doAction(type, n, t, diff){
   } else {
     charState = 'slash'; charUntil = t + 0.22;
     // 1タップで壊せるのは一番近い1個だけ
-    let target = notes.filter(x => x.idx <= player.idx).sort((a,b)=>a.idx-b.idx)[0];
-    // 手前のマスにいる「かたいブロック」は、先に1回割っておける
-    if (!target) target = notes.find(x => x.idx === player.idx + 1 && (x.hp||1) > 1);
+    const target = notes.filter(x => x.idx <= player.idx).sort((a,b)=>a.idx-b.idx)[0];
     if (target){
       fx.push({ type: 'cut', idx: player.idx, t, d: .16 });
       flashBtn('bBreak');
       if ((target.hp||1) > 1){
-        target.hp = (target.hp||1) - 1; target.crackAt = t;   // ヒビが入るだけ
+        // 青 → 赤。そのマスに残るので、進まずにもう1回ブレイクする
+        target.hp = (target.hp||1) - 1; target.crackAt = t; target.hit = true;
         playSE('GOOD');
       } else {
         notes.splice(notes.indexOf(target), 1);
@@ -985,6 +986,7 @@ function tween(from, to, at, t){
 // ===== フラットな図形・一本道の段階表示 =====
 const noteCv=document.createElement('canvas');
 const hardCv=document.createElement('canvas');
+const crackCv=document.createElement('canvas');
 function rr(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);}
 function buildNoteSprite(){
   noteCv.width=320;noteCv.height=320;const c=noteCv.getContext('2d');c.scale(2,2);
@@ -999,6 +1001,13 @@ function buildNoteSprite(){
   h.strokeStyle='#bff2ff';h.lineWidth=2;rr(h,22,22,116,116,5);h.stroke();
   h.strokeStyle='#0b6ea8';h.lineWidth=3;h.beginPath();
   h.moveTo(40,30);h.lineTo(70,70);h.lineTo(45,95);h.moveTo(120,45);h.lineTo(90,80);h.lineTo(120,120);h.moveTo(55,130);h.lineTo(85,100);h.stroke();
+  // 1回切ったあと（赤）。もう1回ブレイクで壊れる
+  crackCv.width=320;crackCv.height=320;const k=crackCv.getContext('2d');k.scale(2,2);
+  k.shadowColor='#ff8a6b';k.shadowBlur=6;rr(k,16,16,128,128,9);k.fillStyle='#ff2f2f';k.fill();k.shadowBlur=0;
+  k.strokeStyle='#081221';k.lineWidth=7;k.stroke();
+  k.strokeStyle='#ffd0c4';k.lineWidth=2;rr(k,22,22,116,116,5);k.stroke();
+  k.strokeStyle='#7d0b0b';k.lineWidth=4;k.beginPath();
+  k.moveTo(30,55);k.lineTo(70,80);k.lineTo(45,110);k.moveTo(70,80);k.lineTo(120,60);k.moveTo(70,80);k.lineTo(110,130);k.stroke();
 }
 function tileAlpha(i,t){
   if(i>revealEnd)return 0;
@@ -1095,12 +1104,8 @@ function draw(t){
     g.save();g.translate(p.x,p.y);
     if(!reduceMotion.matches&&rk<1)g.rotate(ang);
     const pulse=reduceMotion.matches?0:beatPulse(t)*.025;g.scale(1+pulse,1+pulse);
-    const hpv=nt.hp||1;
-    g.drawImage(hpv>1?hardCv:noteCv,-sz/2,-sz/2,sz,sz);
-    if(hpv===1&&nt.crackAt!=null){   // 1回割ったあとの印
-      g.strokeStyle='#bff2ff';g.lineWidth=2.5;g.beginPath();
-      g.moveTo(-sz*.22,-sz*.3);g.lineTo(sz*.06,0);g.lineTo(-sz*.16,sz*.3);g.stroke();
-    }
+    const spr=nt.hit?crackCv:((nt.hp||1)>1?hardCv:noteCv);
+    g.drawImage(spr,-sz/2,-sz/2,sz,sz);
     g.restore();
   }
 
