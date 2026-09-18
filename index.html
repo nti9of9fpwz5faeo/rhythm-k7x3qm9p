@@ -253,7 +253,7 @@ const SONGS = [
 ];
 let difficulty='normal';
 try{if(localStorage.getItem('neon-blade-difficulty')==='hard')difficulty='hard';}catch(e){}
-const DIFFICULTIES={normal:{maxRun:4,gaps:[1,1,2,2,3],dense:[1,1,1,2,3]},hard:{maxRun:6,gaps:[1,1,1,2,2,3],dense:[1,1,1,1,2,3]}};
+const DIFFICULTIES={normal:{maxRun:4,gaps:[1,1,2,2,3],dense:[1,1,1,2,3],hardRate:.12},hard:{maxRun:6,gaps:[1,1,1,2,2,3],dense:[1,1,1,1,2,3],hardRate:.28}};
 let song = SONGS[0], BPM, OFFSET, SPB, WINDOW;
 const chartCache={};
 let activeChart=null;
@@ -489,7 +489,7 @@ function fillGap(from, to, t){
   let last = Math.max(-99, ...notes.map(x => x.idx));
   let i = Math.max(from, last + pickGap());
   while (i <= to){
-    notes.push({ id: noteId++, idx: i, from: i, at: t, pop: t + (i - from) * 0.03 });
+    notes.push({ id: noteId++, idx: i, from: i, at: t, pop: t + (i - from) * 0.03, hp: rollHp(i - last) });
     last = i; i += pickGap();
   }
 }
@@ -539,12 +539,17 @@ function chartFill(n,t){
   const {from,to}=pendingExtension;pendingExtension=null;
   for(let i=Math.max(player.idx+1,from-1);i<to;i++){
     if(chartSpawns(n-(to-i))&&!notes.some(nt=>nt.idx===i))
-      notes.push({id:noteId++,idx:i,from:i,at:t,pop:t});
+      notes.push({id:noteId++,idx:i,from:i,at:t,pop:t,hp:rollHp(gapBefore(i))});
   }
 }
 
 // ノーツ密度を上げ、連続ノーツの後には進める間隔を必ず作る。
 let GAPS=DIFFICULTIES.normal.gaps;
+// かたいブロック（2回ブレイクで壊れる）。1回目は手前のマスにいるうちに割る
+function rollHp(gap){ // 手前が空いてる（gap2以上）ときだけ、かたいブロックにする
+  return gap >= 2 && rand() < (DIFFICULTIES[difficulty].hardRate || 0) ? 2 : 1;
+}
+function gapBefore(i){ const prev = notes.filter(x => x.idx < i).map(x => x.idx); return prev.length ? i - Math.max(...prev) : 99; }
 let nextGap=4,runLen=1;
 function pickGap(){
   let gp=GAPS[Math.floor(rand()*GAPS.length)];
@@ -573,7 +578,7 @@ function onBeat(n, t){
   if (n >= INTRO_BEATS){
     const lastIdx = Math.max(-99, ...notes.map(x => x.idx));
     if (activeChart ? chartSpawns(n)&&lastIdx<gIdx : gIdx - lastIdx >= nextGap){
-      notes.push({ id: noteId++, idx: gIdx, from: gIdx, at: t, pop: t });
+      notes.push({ id: noteId++, idx: gIdx, from: gIdx, at: t, pop: t, hp: rollHp(gIdx - lastIdx) });
       if(!activeChart)nextGap = pickGap();
     }
   }
@@ -657,14 +662,21 @@ function doAction(type, n, t, diff){
   } else {
     charState = 'slash'; charUntil = t + 0.22;
     // 1タップで壊せるのは一番近い1個だけ
-    const target = notes.filter(x => x.idx <= player.idx).sort((a,b)=>a.idx-b.idx)[0];
+    let target = notes.filter(x => x.idx <= player.idx).sort((a,b)=>a.idx-b.idx)[0];
+    // 手前のマスにいる「かたいブロック」は、先に1回割っておける
+    if (!target) target = notes.find(x => x.idx === player.idx + 1 && (x.hp||1) > 1);
     if (target){
-      notes.splice(notes.indexOf(target), 1);
-      effects.push({ idx: target.idx, t });
       fx.push({ type: 'cut', idx: player.idx, t, d: .16 });
       flashBtn('bBreak');
-      if (moveLocked){ moveLocked = false; setLockUI(false); }
-      playSE(word);
+      if ((target.hp||1) > 1){
+        target.hp = (target.hp||1) - 1; target.crackAt = t;   // ヒビが入るだけ
+        playSE('GOOD');
+      } else {
+        notes.splice(notes.indexOf(target), 1);
+        effects.push({ idx: target.idx, t });
+        if (moveLocked){ moveLocked = false; setLockUI(false); }
+        playSE(word);
+      }
       showJudge(word, sub);
     }
   }
@@ -972,6 +984,7 @@ function tween(from, to, at, t){
 
 // ===== フラットな図形・一本道の段階表示 =====
 const noteCv=document.createElement('canvas');
+const hardCv=document.createElement('canvas');
 function rr(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);}
 function buildNoteSprite(){
   noteCv.width=320;noteCv.height=320;const c=noteCv.getContext('2d');c.scale(2,2);
@@ -979,6 +992,13 @@ function buildNoteSprite(){
   c.strokeStyle='#081221';c.lineWidth=7;c.stroke();
   c.strokeStyle='#ff87e0';c.lineWidth=2;rr(c,22,22,116,116,5);c.stroke();
   c.strokeStyle='#c21a9d';c.lineWidth=1.5;c.beginPath();c.moveTo(80,25);c.lineTo(80,135);c.moveTo(25,80);c.lineTo(135,80);c.stroke();
+  // かたいブロック（水色・2回ブレイク）
+  hardCv.width=320;hardCv.height=320;const h=hardCv.getContext('2d');h.scale(2,2);
+  h.shadowColor='#7be9ff';h.shadowBlur=5;rr(h,16,16,128,128,9);h.fillStyle='#19b6ff';h.fill();h.shadowBlur=0;
+  h.strokeStyle='#081221';h.lineWidth=7;h.stroke();
+  h.strokeStyle='#bff2ff';h.lineWidth=2;rr(h,22,22,116,116,5);h.stroke();
+  h.strokeStyle='#0b6ea8';h.lineWidth=3;h.beginPath();
+  h.moveTo(40,30);h.lineTo(70,70);h.lineTo(45,95);h.moveTo(120,45);h.lineTo(90,80);h.lineTo(120,120);h.moveTo(55,130);h.lineTo(85,100);h.stroke();
 }
 function tileAlpha(i,t){
   if(i>revealEnd)return 0;
@@ -1075,7 +1095,13 @@ function draw(t){
     g.save();g.translate(p.x,p.y);
     if(!reduceMotion.matches&&rk<1)g.rotate(ang);
     const pulse=reduceMotion.matches?0:beatPulse(t)*.025;g.scale(1+pulse,1+pulse);
-    g.drawImage(noteCv,-sz/2,-sz/2,sz,sz);g.restore();
+    const hpv=nt.hp||1;
+    g.drawImage(hpv>1?hardCv:noteCv,-sz/2,-sz/2,sz,sz);
+    if(hpv===1&&nt.crackAt!=null){   // 1回割ったあとの印
+      g.strokeStyle='#bff2ff';g.lineWidth=2.5;g.beginPath();
+      g.moveTo(-sz*.22,-sz*.3);g.lineTo(sz*.06,0);g.lineTo(-sz*.16,sz*.3);g.stroke();
+    }
+    g.restore();
   }
 
   effects=effects.filter(e=>t-e.t<.32);
