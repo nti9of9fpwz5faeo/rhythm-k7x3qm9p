@@ -148,6 +148,7 @@
   .difficultyBtn{flex:1;min-height:38px;border:3px solid #081221;border-radius:11px;background:#1443ae;color:#fff;font-size:13px;font-weight:900}
   .difficultyBtn[aria-pressed="true"]{background:#c6ff44;color:#081221;box-shadow:inset 0 0 0 2px #f4ffbf}
   .difficultyBtn[data-difficulty="hard"][aria-pressed="true"]{background:#ff64cc;color:#081221;box-shadow:inset 0 0 0 2px #ffd7f3}
+  #endlessBtn[aria-pressed="true"]{background:#ffd23c;color:#081221;box-shadow:inset 0 0 0 2px #fff0a8}
   .resultScreen{overflow-y:auto;touch-action:pan-y;justify-content:safe center;padding:calc(env(safe-area-inset-top) + 15px) 18px calc(env(safe-area-inset-bottom) + 15px)}
   .resultSheet{width:min(420px,100%);flex:none;--result-accent:#40e9ff}
   .resultHeader{text-align:center}.resultHeader .resultTitle{margin:0;font-size:38px;letter-spacing:.035em;line-height:1.15}
@@ -221,7 +222,7 @@
   <h1>NEON <b>BLADE</b></h1>
   <button id="heroOpen" disabled><canvas id="heroMini" width="240" height="180" aria-hidden="true"></canvas><span><small>CHARACTER</small><strong id="heroCurrent">ネオン</strong></span><b>変更 ↗</b></button>
   <p id="loadTxt">読み込み中…</p>
-  <div id="difficultyPicker" role="group" aria-label="難易度"><button class="difficultyBtn" data-difficulty="normal" aria-pressed="true">NORMAL</button><button class="difficultyBtn" data-difficulty="hard" aria-pressed="false">HARD</button></div>
+  <div id="difficultyPicker" role="group" aria-label="難易度"><button class="difficultyBtn" data-difficulty="normal" aria-pressed="true">NORMAL</button><button class="difficultyBtn" data-difficulty="hard" aria-pressed="false">HARD</button><button class="difficultyBtn" id="endlessBtn" aria-pressed="false">エンドレス</button></div>
   <div id="songList"></div>
   <div id="speedSettings"><span>ノーツスピード</span><button id="spDown" aria-label="おそく">−</button><b id="spVal">×1.0</b><button id="spUp" aria-label="はやく">＋</button></div>
   <details id="timingSettings"><summary>タイミング調整</summary><label for="timingRange">動きのタイミング <b id="timingValue">0 ms</b></label><input id="timingRange" type="range" min="-250" max="250" step="5" value="0"><p>動きが音より早い → ＋へ<br>動きが音より遅い → −へ</p><button id="timingReset">0に戻す</button></details>
@@ -257,7 +258,12 @@ const DIFFICULTIES={normal:{maxRun:4,gaps:[1,1,2,2,3],dense:[1,1,1,2,3],hardRate
 let song = SONGS[0], BPM, OFFSET, SPB, WINDOW;
 const chartCache={};
 let activeChart=null;
-function setSong(sg){ song = sg; activeChart=chartCache[sg.chart]||null; GAPS = sg.dense ? DIFFICULTIES[difficulty].dense : DIFFICULTIES[difficulty].gaps; BPM = sg.bpm; OFFSET = sg.offset; SPB = 60 / BPM; WINDOW = Math.min(0.17, SPB * 0.36); }
+// エンドレス：1周するごとに曲もノーツも速くなる（ゴールなし）
+let endless=false,lap=0,rate=1;
+try{endless=localStorage.getItem('neon-blade-endless')==='1';}catch(e){}
+function applyRate(){ BPM = song.bpm * rate; OFFSET = song.offset / rate; SPB = 60 / BPM; WINDOW = Math.min(0.17, SPB * 0.36); }
+function updateEndlessUI(){ document.getElementById('endlessBtn').setAttribute('aria-pressed',String(endless)); }
+function setSong(sg){ song = sg; activeChart=chartCache[sg.chart]||null; GAPS = sg.dense ? DIFFICULTIES[difficulty].dense : DIFFICULTIES[difficulty].gaps; applyRate(); }
 const COLS = 8, ROWS = 11;
 const MAX_HP = 5;
 // チェックポイント（破線）。着いたら解除されて、Gが次の場所へ移動
@@ -520,9 +526,9 @@ function songTime(){
 function beatTime(n){
   const beats=activeChart?.beats;
   if(!beats)return OFFSET+n*SPB;
-  if(n<0)return beats[0]+n*SPB;
-  if(n>=beats.length)return beats[beats.length-1]+(n-beats.length+1)*SPB;
-  return beats[n];
+  if(n<0)return beats[0]/rate+n*SPB;
+  if(n>=beats.length)return beats[beats.length-1]/rate+(n-beats.length+1)*SPB;
+  return beats[n]/rate;
 }
 function nearestBeat(t){
   if(!activeChart)return Math.round((t-OFFSET)/SPB);
@@ -562,13 +568,28 @@ function updateDifficultyUI(){
 }
 document.querySelectorAll('[data-difficulty]').forEach(b=>b.addEventListener('click',()=>{
   if(state!=='ready'||pickingSong)return;
-  difficulty=b.dataset.difficulty;setSong(song);updateDifficultyUI();
+  difficulty=b.dataset.difficulty;setSong(song);updateDifficultyUI();updateEndlessUI();
+document.getElementById('endlessBtn').addEventListener('click',()=>{
+  if(state!=='ready'||pickingSong)return;
+  endless=!endless;updateEndlessUI();
+  try{localStorage.setItem('neon-blade-endless',endless?'1':'0');}catch(e){}
+});
   try{localStorage.setItem('neon-blade-difficulty',difficulty);}catch(e){}
 }));
-updateDifficultyUI();
+updateDifficultyUI();updateEndlessUI();
+document.getElementById('endlessBtn').addEventListener('click',()=>{
+  if(state!=='ready'||pickingSong)return;
+  endless=!endless;updateEndlessUI();
+  try{localStorage.setItem('neon-blade-endless',endless?'1':'0');}catch(e){}
+});
 
 function onBeat(n, t){
-  // 赤いブロックが自分のマスに残っている間は、全部その場で足踏み（回るだけ）
+  // 赤いブロックが残っている間は全部その場で足踏み。ただし1拍だけ。
+  const red = notes.find(nt => nt.hit);
+  if (red && n > (red.hitBeat ?? n) + 1){     // 1拍待っても壊せてない → ダメージ
+    notes.splice(notes.indexOf(red), 1);
+    damage(t);
+  }
   const frozen = notes.some(nt => nt.hit);
   if (n >= INTRO_BEATS && notes.length){
     for (const nt of notes){
@@ -674,7 +695,7 @@ function doAction(type, n, t, diff){
       flashBtn('bBreak');
       if ((target.hp||1) > 1){
         // 青 → 赤。そのマスに残るので、進まずにもう1回ブレイクする
-        target.hp = (target.hp||1) - 1; target.crackAt = t; target.hit = true;
+        target.hp = (target.hp||1) - 1; target.crackAt = t; target.hit = true; target.hitBeat = n;
         playSE('GOOD');
       } else {
         notes.splice(notes.indexOf(target), 1);
@@ -1220,7 +1241,8 @@ function loop(){
       else{onBeat(nextBeat,bt);nextBeat++;}
     }
     if (state==='play' && player.idx >= LINES[lineK] && hp > 0){
-      if (lineK === LINES.length - 1){ fx.push({ type: 'goal', idx: player.idx, t, d: .5 }); end(true); }
+      if (lineK === LINES.length - 1 && endless){ nextLap(t,false); }
+      else if (lineK === LINES.length - 1){ fx.push({ type: 'goal', idx: player.idx, t, d: .5 }); end(true); }
       else {
         lineK++; gFrom = gIdx; gIdx = gIndexFor(lineK); gMoveAt = t;
         advanceView(t);
@@ -1228,9 +1250,9 @@ function loop(){
         texts.push({ s: '突破！', idx: player.idx, t, col: '#50e6ff' });
       }
     }
-    if (t > songBuf.duration) end(false);
+    if (t > songBuf.duration / rate){ if(endless) nextLap(t,true); else end(false); }
   }
-  if (state === 'play' && songBuf) progFill.style.width = (Math.min(1, Math.max(0, t / songBuf.duration)) * 100) + '%';
+  if (state === 'play' && songBuf) progFill.style.width = (Math.min(1, Math.max(0, t / (songBuf.duration / rate))) * 100) + '%';
   draw(t);
   if(state==='clear'&&victoryAt>=0)drawVictory();
 }
@@ -1255,16 +1277,29 @@ function startMusicAt(rawPosition=0){
   stopSong();
   const offset=Math.max(0,rawPosition),delay=.12+Math.max(0,-rawPosition);
   const at=ctx.currentTime+delay;
-  songSrc=ctx.createBufferSource();songSrc.buffer=songBuf;
+  songSrc=ctx.createBufferSource();songSrc.buffer=songBuf;songSrc.playbackRate.value=rate;
   songGain=ctx.createGain();songGain.gain.value=1;
   songSrc.connect(songGain);songGain.connect(ctx.destination);
   const src=songSrc,gain=songGain;
   src.onended=()=>{src.disconnect();gain.disconnect();};
-  songStart=at-offset;syncClock();songSrc.start(at,Math.min(offset,songBuf.duration));
+  songStart=at-offset;syncClock();songSrc.start(at,Math.min(offset*rate,songBuf.duration));
+}
+// 1周まわった（または曲が終わった）ときに、速くして最初から
+function nextLap(t, songEnded){
+  if(!songEnded){ lap++; rate = Math.min(2.2, 1 + lap * 0.1); applyRate(); }
+  showJudge('PERFECT', songEnded ? 'LAP ' + (lap+1) : 'SPEED UP ×' + rate.toFixed(1));
+  player = { idx: 0, from: 0, at: 0 }; notes = []; effects = []; texts = []; fx = [];
+  nextBeat = 0; acted = -1; pendingCheck = []; nextGap = 4; runLen = 1;
+  lineK = 0; gIdx = gIndexFor(0); gFrom = gIdx; gMoveAt = -9;
+  cameraRow=0;cameraFrom=0;cameraTarget=0;cameraAt=-9;setPalette(0);
+  revealEnd=REVEAL_ENDS[0];revealFrom=revealEnd;
+  moveLocked = false; setLockUI(false);
+  stopMoveScheduler(); startMusicAt(); startMoveScheduler();
 }
 function startGame(){
   document.querySelectorAll('.overlay').forEach(o=>o.classList.add('hide'));
   reset();progFill.style.width='0%';
+  lap=0;rate=1;applyRate();
   if(ctx.state==='suspended')ctx.resume();
   startMusicAt();state='play';startMoveScheduler();
 }
