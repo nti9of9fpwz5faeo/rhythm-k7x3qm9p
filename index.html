@@ -18,7 +18,7 @@
   #hud{height:35px;display:flex;align-items:center;gap:10px}
   #hud svg{width:29px;height:29px;overflow:visible;filter:drop-shadow(0 0 5px #5ddfeb44);transition:opacity .2s,transform .2s}
   #hud svg.lost{opacity:.22;transform:scale(.88);filter:grayscale(1)}
-  #tip{position:absolute;left:50%;transform:translateX(-50%);top:6px;width:min(340px,92vw);padding:10px 14px;border:3px solid #081221;border-radius:12px;background:#fffbe6;color:#081221;font-size:14px;font-weight:800;line-height:1.5;text-align:center;white-space:pre-line;box-shadow:0 4px 0 #081221;z-index:3}
+  #tip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,90vw);padding:14px 18px;border:3px solid #5ddfeb;border-radius:14px;background:#081221f2;color:#fff;font-size:16px;font-weight:800;line-height:1.6;text-align:center;white-space:pre-line;box-shadow:0 0 22px #5ddfeb88;z-index:3;pointer-events:none}
   #tip.hide{display:none}
   #fieldWrap{position:relative}
   #judge{height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
@@ -39,6 +39,9 @@
   .btn .bubbles{position:absolute;right:5px;bottom:4px;width:43px;height:42px;opacity:.55;color:var(--accent)}
   .btn.locked{opacity:.38}
   .btn.flash{animation:buttonFlash .16s ease-out}
+  .btn.guide{animation:guidePulse .6s ease-in-out infinite alternate}
+  @keyframes guidePulse{from{transform:scale(1);box-shadow:0 0 0 0 #ffffff00,0 0 14px var(--accent)}to{transform:scale(1.06);box-shadow:0 0 0 5px #ffffffcc,0 0 40px var(--accent)}}
+  #hud.spot svg{filter:drop-shadow(0 0 6px #fff) drop-shadow(0 0 10px #ffe737);transform:scale(1.25);animation:guidePulse .6s ease-in-out infinite alternate}
   @keyframes buttonFlash{from{filter:brightness(1.8);box-shadow:0 0 24px var(--accent)}to{filter:brightness(1)}}
   .btn.press{transform:scale(.97)}
   #impactVeil{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;box-shadow:inset 0 0 75px #ff173e99}
@@ -78,7 +81,7 @@
   #app[data-zone="1"]:after{background:repeating-linear-gradient(135deg,transparent 0 90px,#ff69f44d 90px 124px,transparent 124px 185px)}
   #top{width:min(100%,500px)}
   #hud{height:42px;gap:7px}#hud svg{width:33px;height:33px;filter:none}#hud svg.lost{opacity:.8;filter:none}
-  #tip{position:absolute;left:50%;transform:translateX(-50%);top:6px;width:min(340px,92vw);padding:10px 14px;border:3px solid #081221;border-radius:12px;background:#fffbe6;color:#081221;font-size:14px;font-weight:800;line-height:1.5;text-align:center;white-space:pre-line;box-shadow:0 4px 0 #081221;z-index:3}
+  #tip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,90vw);padding:14px 18px;border:3px solid #5ddfeb;border-radius:14px;background:#081221f2;color:#fff;font-size:16px;font-weight:800;line-height:1.6;text-align:center;white-space:pre-line;box-shadow:0 0 22px #5ddfeb88;z-index:3;pointer-events:none}
   #tip.hide{display:none}
   #fieldWrap{position:relative}
   #judge{height:54px}#jWord{font-size:27px;font-weight:1000;letter-spacing:.015em;-webkit-text-stroke:4px #09121e;paint-order:stroke fill;color:#fff!important}
@@ -107,7 +110,7 @@
 
 
   /* 判定はプレイ地点のそばに。上部へ視線を動かさず確認できる。 */
-  #tip{position:absolute;left:50%;transform:translateX(-50%);top:6px;width:min(340px,92vw);padding:10px 14px;border:3px solid #081221;border-radius:12px;background:#fffbe6;color:#081221;font-size:14px;font-weight:800;line-height:1.5;text-align:center;white-space:pre-line;box-shadow:0 4px 0 #081221;z-index:3}
+  #tip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,90vw);padding:14px 18px;border:3px solid #5ddfeb;border-radius:14px;background:#081221f2;color:#fff;font-size:16px;font-weight:800;line-height:1.6;text-align:center;white-space:pre-line;box-shadow:0 0 22px #5ddfeb88;z-index:3;pointer-events:none}
   #tip.hide{display:none}
   #fieldWrap{position:relative}
   #judge{position:absolute;left:0;top:0;width:150px;height:52px;z-index:3;pointer-events:none;opacity:0;line-height:1.1;will-change:transform}
@@ -489,7 +492,7 @@ function reset(){
   cv.style.transform = '';
   hp = MAX_HP; player = { idx: 0, from: 0, at: 0 }; moveLocked = true;
   notes = []; effects = []; texts = []; fx = [];
-  setLockUI(true);
+  setLockUI(true); tutClearUI();
   nextBeat = 0; acted = -1; pendingCheck = [];
   charState = 'idle'; charUntil = 0; shakeUntil = 0; spawnSeed = Math.floor(Math.random() * 100000) + 1; earlyInput = null;
   nextGap = 4; runLen = 1;
@@ -589,56 +592,95 @@ document.getElementById('endlessBtn').addEventListener('click',()=>{
 });
 
 // ===== チュートリアル =====
-// 本編と同じ順番で覚える：ブレイク → 進む → 進みながらブレイク → 青ブロック → ライフ → 突破
+// 本編と同じコース・同じゴール。最初の数ステップだけ、ブロックが目の前で待ってくれてダメージなし。
+// その後は本番と同じルールでゴールを目指す。1回きり（エンドレスにはならない）。
+//  need/count … 進むための操作と回数   single … その数のHPのブロックを1個だけ出す（無ければ通常どおり出る）
+//  wait … 目の前に来たブロックが押すまで待つ   safe … ダメージなし   freeze … 全部止める
+//  spot … ブロックと自分だけ明るくする   btn … 光らせるボタン   hud … ハートを強調   auto … 秒数で次へ
 const TUTORIAL = [
-  { tip:'ブロックが来る。\n自分のマスに来たら「ブレイク」！', need:'break', count:1, hp:1 },
-  { tip:'「進む」が使えるようになった。\n3回進んでみよう', need:'move', count:3 },
-  { tip:'進んでいる間もブロックは来る。\n自分のマスに来たらブレイク（2個）', need:'break', count:2, hp:1 },
-  { tip:'青いブロックは2回ブレイク。\n1回目で赤くなる', need:'break', count:1, hp:2 },
-  { tip:'ライフは5つ（ハート）。\n壊しそこねると1つ減り、0でゲームオーバー\n（この練習では減らない）', need:'break', count:1, hp:1 },
-  { tip:'破線まで進むと「突破」。\n次の破線まで進んでクリア！', need:'goal' },
+  { msg:'ブロックがこっちに来る\n自分のマスに来たら「ブレイク」', need:'break', count:1, single:1, wait:true, safe:true, spot:true, btn:'bBreak' },
+  { msg:'「進む」で1マス進める\n進みながら、来たブロックを壊していこう', need:'move', count:3, wait:true, safe:true, spot:true, btn:'bMove' },
+  { msg:'ブロックは次々来る\n止まらずに、進みながら壊そう', need:'break', count:3, wait:true, safe:true, spot:true, btn:'bBreak' },
+  { msg:'青いブロックは2回ブレイク\n1回目で赤くなる', need:'break', count:1, single:2, wait:true, safe:true, spot:true, btn:'bBreak' },
+  { msg:'ライフは5つ（左上のハート）\n壊しそこねると1つ減り、0でゲームオーバー', auto:4, freeze:true, safe:true, hud:true },
+  { msg:'ここからは本番と同じ\n曲が終わるまでにゴールへ！', auto:3, freeze:true, safe:true },
+  { live:true },
 ];
-const TUT_GOAL_LINE = 1;   // チュートリアルは2本目の破線でクリア
-let tutStep=0, tutDone=0, tutSpawned=0;
+let tutStep=0, tutDone=0, tutSpawned=0, tutStepAt=0;
 function isTutorial(){ return !!song.tutorial; }
-function lastLine(){ return isTutorial() ? TUT_GOAL_LINE : LINES.length - 1; }
+function tutSt(){ return isTutorial() ? TUTORIAL[tutStep] : null; }
+function tutSafe(){ return !!tutSt()?.safe; }
+function tutWait(){ return !!tutSt()?.wait; }
+function tutFreeze(){ return !!tutSt()?.freeze; }
+function tutSingle(){ return !!tutSt()?.single; }
+function tutSpot(){ return !!tutSt()?.spot; }
 function showTip(text){
   const el=document.getElementById('tip');
   if(!text){el.classList.add('hide');return;}
   el.textContent=text;el.classList.remove('hide');
 }
+function tutClearUI(){
+  showTip('');
+  document.querySelectorAll('.btn.guide').forEach(b=>b.classList.remove('guide'));
+  document.getElementById('hud').classList.remove('spot');
+}
+function tutApplyUI(){
+  tutClearUI();
+  const st=tutSt(); if(!st)return;
+  showTip(st.msg||'');
+  if(st.btn)document.getElementById(st.btn).classList.add('guide');
+  document.getElementById('hud').classList.toggle('spot',!!st.hud);
+}
+function tutAdvance(t){
+  tutStep++; tutDone=0; tutSpawned=0; tutStepAt=t; tutApplyUI();
+}
 function tutProgress(kind){
   if(!isTutorial()||state!=='play')return;
-  const st=TUTORIAL[tutStep]; if(!st||st.need!==kind)return;
+  const st=tutSt(); if(!st||st.need!==kind)return;
   tutDone++;
-  if(tutDone>=(st.count||1)){ tutStep++; tutDone=0; tutSpawned=0; showTip(TUTORIAL[tutStep]?.tip||''); }
+  if(tutDone>=(st.count||1)) tutAdvance(songTime());
 }
-// ブレイク練習のステップだけ、1個ずつブロックを出す（壊したら次）
+// single のステップ：ブロックが無くなったら、指定HPのブロックをGから1個出す
 function tutBeat(t){
-  const st=TUTORIAL[tutStep];
-  if(!st||st.need!=='break')return;
-  const want=st.count||1;
-  if(tutSpawned<want && notes.length===0){
-    const from=Math.min(player.idx+5,EXIT_INDEX);
-    notes.push({id:noteId++,idx:from,from,at:t,pop:t,hp:st.hp||1});
+  const st=tutSt(); if(!st?.single)return;
+  if(tutSpawned<(st.count||1) && notes.length===0){
+    notes.push({id:noteId++,idx:gIdx,from:gIdx,at:t,pop:t,hp:st.single});
     tutSpawned++;
   }
 }
-// 曲が終わっても終了せず、曲だけ最初から鳴らし直す
+// 練習中は曲が終わっても終了せず、曲だけ最初から
 function tutLoopMusic(){
-  notes = []; tutSpawned = 0; nextBeat = 0; acted = -1; pendingCheck = []; earlyInput = null;
+  notes = []; tutSpawned = 0; tutStepAt = 0; nextBeat = 0; acted = -1; pendingCheck = []; earlyInput = null;
   stopMoveScheduler(); startMusicAt(); startMoveScheduler();
+}
+// ブロックと自分以外を暗くして、見るところを教える
+function drawSpotlight(t){
+  if(!tutSpot()||state!=='play')return;
+  const vp=tween(player.from,player.idx,player.at,t);
+  const pts=[cellXY(vp)];
+  for(const nt of notes) pts.push(cellXY(tween(nt.from,nt.idx,nt.at,t)));
+  const r=cell*.95;
+  g.save();
+  g.beginPath();g.rect(0,0,boardW,boardH);
+  for(const p of pts){g.moveTo(p.x+r,p.y);g.arc(p.x,p.y,r,0,Math.PI*2);}
+  g.fillStyle='rgba(2,6,14,.68)';g.fill('evenodd');
+  const k=(Math.sin(t*6)+1)/2;
+  for(const p of pts.slice(1)){
+    g.beginPath();g.arc(p.x,p.y,r+cell*.08*k,0,Math.PI*2);
+    g.strokeStyle=`rgba(255,231,55,${.5+.5*k})`;g.lineWidth=3;g.stroke();
+  }
+  g.restore();
 }
 
 function onBeat(n, t){
   // 赤いブロックが残っている間は全部その場で足踏み。ただし1拍だけ。
   const red = notes.find(nt => nt.hit);
-  if (red && n > (red.hitBeat ?? n) + 1 && !isTutorial()){     // 1拍待っても壊せてない → ダメージ
+  if (red && n > (red.hitBeat ?? n) + 1 && !tutSafe()){     // 1拍待っても壊せてない → ダメージ
     notes.splice(notes.indexOf(red), 1);
     damage(t);
   }
-  // チュートリアルは、ブロックが目の前に来たらプレイヤーが押すまで待つ
-  const frozen = notes.some(nt => nt.hit) || (isTutorial() && notes.some(nt => nt.idx <= player.idx));
+  // 練習中は、ブロックが目の前に来たらプレイヤーが押すまで待つ
+  const frozen = notes.some(nt => nt.hit) || tutFreeze() || (tutWait() && notes.some(nt => nt.idx <= player.idx));
   if (n >= INTRO_BEATS && notes.length){
     for (const nt of notes){
       nt.from = nt.idx; nt.at = t;
@@ -648,7 +690,7 @@ function onBeat(n, t){
   }
   if(activeChart&&n>=INTRO_BEATS)chartFill(n,t);
   // ブロックを出す
-  if (isTutorial()){ if(!frozen) tutBeat(t); }
+  if (tutSingle()){ if(!frozen) tutBeat(t); }
   else if (n >= INTRO_BEATS && !frozen){
     const lastIdx = Math.max(-99, ...notes.map(x => x.idx));
     if (activeChart ? chartSpawns(n)&&lastIdx<gIdx : gIdx - lastIdx >= nextGap){
@@ -664,7 +706,7 @@ function onBeat(n, t){
 }
 
 function checkHit(t){
-  if (isTutorial()) return;   // チュートリアルではダメージなし
+  if (tutSafe()) return;   // 練習中はダメージなし
   for (const nt of [...notes]){
     if (nt.idx <= player.idx && !nt.hit){
       notes.splice(notes.indexOf(nt), 1);
@@ -997,7 +1039,7 @@ function finishResult(clear){
 }
 function end(clear){
   if(state!=='play')return;
-  stopMoveScheduler();document.getElementById('pauseBtn').disabled=true;
+  stopMoveScheduler();document.getElementById('pauseBtn').disabled=true;tutClearUI();
   state=clear?'clear':'over';
   finishedRun=captureResult(clear);
   document.querySelectorAll('#controls button').forEach(b=>{b.disabled=true;b.classList.remove('press');});
@@ -1204,6 +1246,7 @@ function draw(t){
     g.beginPath();g.moveTo(p.x-r,p.y+r*.72);g.lineTo(p.x+r,p.y-r*.72);g.stroke();g.restore();
   }
   drawChar(t);
+  drawSpotlight(t);
   if(document.getElementById('judge').classList.contains('pop'))placeJudge(t);
   texts=texts.filter(x=>t-x.t<.5);g.textAlign='center';g.font=`600 ${Math.max(10,Math.round(cell*.26))}px sans-serif`;
   for(const x of texts){
@@ -1293,16 +1336,17 @@ function loop(){
       else{onBeat(nextBeat,bt);nextBeat++;}
     }
     if (state==='play' && player.idx >= LINES[lineK] && hp > 0){
-      if (lineK === lastLine() && endless && !isTutorial()){ nextLap(t,false); }
-      else if (lineK === lastLine()){ fx.push({ type: 'goal', idx: player.idx, t, d: .5 }); end(true); }
+      if (lineK === LINES.length - 1 && endless && !isTutorial()){ nextLap(t,false); }
+      else if (lineK === LINES.length - 1){ fx.push({ type: 'goal', idx: player.idx, t, d: .5 }); end(true); }
       else {
         lineK++; gFrom = gIdx; gIdx = gIndexFor(lineK); gMoveAt = t;
         advanceView(t);
-        if(!isTutorial()) fillGap(gFrom + 1, gIdx, t);
+        if(!tutSingle()) fillGap(gFrom + 1, gIdx, t);
         texts.push({ s: '突破！', idx: player.idx, t, col: '#50e6ff' });
       }
     }
-    if (t > songBuf.duration / rate){ if(isTutorial()) tutLoopMusic(); else if(endless) nextLap(t,true); else end(false); }
+    if (isTutorial()){ const st=tutSt(); if(st?.auto && t-tutStepAt>=st.auto) tutAdvance(t); }
+    if (t > songBuf.duration / rate){ if(isTutorial()&&!tutSt()?.live) tutLoopMusic(); else if(endless&&!isTutorial()) nextLap(t,true); else end(false); }
   }
   if (state === 'play' && songBuf) progFill.style.width = (Math.min(1, Math.max(0, t / (songBuf.duration / rate))) * 100) + '%';
   draw(t);
@@ -1352,8 +1396,7 @@ function startGame(){
   document.querySelectorAll('.overlay').forEach(o=>o.classList.add('hide'));
   reset();progFill.style.width='0%';
   lap=0;rate=song.rate||1;applyRate();
-  tutStep=0;tutDone=0;tutSpawned=0;
-  showTip(isTutorial()?TUTORIAL[0].tip:'');
+  tutStep=0;tutDone=0;tutSpawned=0;tutStepAt=0;tutApplyUI();
   if(ctx.state==='suspended')ctx.resume();
   startMusicAt();state='play';startMoveScheduler();
 }
