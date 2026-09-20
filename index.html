@@ -18,6 +18,9 @@
   #hud{height:35px;display:flex;align-items:center;gap:10px}
   #hud svg{width:29px;height:29px;overflow:visible;filter:drop-shadow(0 0 5px #5ddfeb44);transition:opacity .2s,transform .2s}
   #hud svg.lost{opacity:.22;transform:scale(.88);filter:grayscale(1)}
+  #tip{position:absolute;left:50%;transform:translateX(-50%);top:6px;width:min(340px,92vw);padding:10px 14px;border:3px solid #081221;border-radius:12px;background:#fffbe6;color:#081221;font-size:14px;font-weight:800;line-height:1.5;text-align:center;white-space:pre-line;box-shadow:0 4px 0 #081221;z-index:3}
+  #tip.hide{display:none}
+  #fieldWrap{position:relative}
   #judge{height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
   #jWord{font-size:23px;font-weight:700;letter-spacing:.16em;min-height:23px}
   #jSub{font-size:10px;margin-top:5px;color:#a7bec5;letter-spacing:.12em;min-height:10px}
@@ -75,6 +78,9 @@
   #app[data-zone="1"]:after{background:repeating-linear-gradient(135deg,transparent 0 90px,#ff69f44d 90px 124px,transparent 124px 185px)}
   #top{width:min(100%,500px)}
   #hud{height:42px;gap:7px}#hud svg{width:33px;height:33px;filter:none}#hud svg.lost{opacity:.8;filter:none}
+  #tip{position:absolute;left:50%;transform:translateX(-50%);top:6px;width:min(340px,92vw);padding:10px 14px;border:3px solid #081221;border-radius:12px;background:#fffbe6;color:#081221;font-size:14px;font-weight:800;line-height:1.5;text-align:center;white-space:pre-line;box-shadow:0 4px 0 #081221;z-index:3}
+  #tip.hide{display:none}
+  #fieldWrap{position:relative}
   #judge{height:54px}#jWord{font-size:27px;font-weight:1000;letter-spacing:.015em;-webkit-text-stroke:4px #09121e;paint-order:stroke fill;color:#fff!important}
   #jSub{font-size:12px;font-weight:900;color:#fff;letter-spacing:.02em;-webkit-text-stroke:3px #09121e;paint-order:stroke fill}
   #progress{height:10px;border:3px solid #081221;border-radius:10px;background:#173279;overflow:hidden;margin-top:7px}#progress i{background:#34e7ff;box-shadow:none}
@@ -101,6 +107,9 @@
 
 
   /* 判定はプレイ地点のそばに。上部へ視線を動かさず確認できる。 */
+  #tip{position:absolute;left:50%;transform:translateX(-50%);top:6px;width:min(340px,92vw);padding:10px 14px;border:3px solid #081221;border-radius:12px;background:#fffbe6;color:#081221;font-size:14px;font-weight:800;line-height:1.5;text-align:center;white-space:pre-line;box-shadow:0 4px 0 #081221;z-index:3}
+  #tip.hide{display:none}
+  #fieldWrap{position:relative}
   #judge{position:absolute;left:0;top:0;width:150px;height:52px;z-index:3;pointer-events:none;opacity:0;line-height:1.1;will-change:transform}
   #judge.pop{opacity:1}
   #jWord{font-size:23px;min-height:25px;-webkit-text-stroke:3.5px #071221;paint-order:stroke fill;color:var(--judge-color,#fff)!important}
@@ -206,7 +215,7 @@
   <div class="hudRow"><div id="hud" aria-label="体力5"></div><button id="pauseBtn" aria-label="一時停止・終了" disabled>Ⅱ</button></div>
   <div id="progress"><i id="progFill"></i></div>
   </div>
-  <div id="fieldWrap"><canvas id="cv"></canvas><div id="judge"><span id="jWord"></span><small id="jSub"></small></div></div>
+  <div id="fieldWrap"><canvas id="cv"></canvas><div id="tip" class="hide"></div><div id="judge"><span id="jWord"></span><small id="jSub"></small></div></div>
   <div id="controls">
     <button class="btn" id="bMove" aria-label="進む"><svg class="icon" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 8 9 31q-2 3 2 3h11v21h20V34h11q4 0 2-3Z" fill="#66dfe21a" stroke="#b6fbff" stroke-width="2.5" stroke-linejoin="round"/></svg><span>進む</span><svg class="bubbles" viewBox="0 0 50 50" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width=".8"><circle cx="36" cy="31" r="7"/><circle cx="23" cy="41" r="3.5"/><circle cx="42" cy="44" r="2"/><circle cx="32" cy="17" r="2.4"/><circle cx="16" cy="33" r="1.4"/><circle cx="42" cy="9" r="1"/></g></svg></button>
     <button class="btn" id="bBreak" aria-label="ブレイク"><svg class="icon" viewBox="0 0 64 64" aria-hidden="true"><rect x="16" y="17" width="35" height="35" rx="3" fill="#920d2588" stroke="#ff3550" stroke-width="2"/><path d="M33 20v29M19 34h29" stroke="#c01c93" stroke-width="1"/><path d="m6 57 13-22L59 6 47 29Z" fill="#b5fbff" stroke="#62eafa" stroke-width="1.5"/><path d="m9 54 43-34" stroke="#fff" stroke-width="1.5"/></svg><span>ブレイク</span><svg class="bubbles" viewBox="0 0 50 50" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width=".8"><circle cx="36" cy="31" r="7"/><circle cx="23" cy="41" r="3.5"/><circle cx="42" cy="44" r="2"/><circle cx="32" cy="17" r="2.4"/><circle cx="16" cy="33" r="1.4"/><circle cx="42" cy="9" r="1"/></g></svg></button>
@@ -246,6 +255,7 @@
 // ===== 設定 =====
 // 曲リスト（bpm＝テンポ、offset＝最初のドンまでの秒数）
 const SONGS = [
+  { name: 'チュートリアル', file: 'audio/tutorial.mp3', fallback: 'audio/song.mp3', bpm: 129, offset: 0.34, level: 'はじめて', tutorial: true, rate: .8 },
   { name: 'Shatter Forward', file: 'audio/shatter_forward.mp3', bpm: 130.3, offset: .002, level: '曲専用譜面', chart: 'charts/shatter_forward.json' },
   { name: 'Zombie Protocol',     file: 'audio/song.mp3',    bpm: 129,   offset: 0.34, level: 'ふつう' },
   { name: 'Stutter Bass Groove', file: 'audio/stutter.mp3', bpm: 150.1, offset: 0.0,  level: 'はやい', hard: true },
@@ -477,7 +487,7 @@ function reset(){
   revealEnd=REVEAL_ENDS[0];revealFrom=revealEnd;
   document.getElementById('impactVeil').classList.remove('hit');
   cv.style.transform = '';
-  hp = MAX_HP; player = { idx: 0, from: 0, at: 0 }; moveLocked = true;
+  hp = MAX_HP; player = { idx: 0, from: 0, at: 0 }; moveLocked = !song.tutorial;
   notes = []; effects = []; texts = []; fx = [];
   setLockUI(true);
   nextBeat = 0; acted = -1; pendingCheck = [];
@@ -568,12 +578,7 @@ function updateDifficultyUI(){
 }
 document.querySelectorAll('[data-difficulty]').forEach(b=>b.addEventListener('click',()=>{
   if(state!=='ready'||pickingSong)return;
-  difficulty=b.dataset.difficulty;setSong(song);updateDifficultyUI();updateEndlessUI();
-document.getElementById('endlessBtn').addEventListener('click',()=>{
-  if(state!=='ready'||pickingSong)return;
-  endless=!endless;updateEndlessUI();
-  try{localStorage.setItem('neon-blade-endless',endless?'1':'0');}catch(e){}
-});
+  difficulty=b.dataset.difficulty;setSong(song);updateDifficultyUI();
   try{localStorage.setItem('neon-blade-difficulty',difficulty);}catch(e){}
 }));
 updateDifficultyUI();updateEndlessUI();
@@ -583,14 +588,48 @@ document.getElementById('endlessBtn').addEventListener('click',()=>{
   try{localStorage.setItem('neon-blade-endless',endless?'1':'0');}catch(e){}
 });
 
+// ===== チュートリアル =====
+const TUTORIAL = [
+  { tip:'まずは「進む」を3回おしてみよう👣', need:'move', count:3 },
+  { tip:'ブロックが来るで🟪\n自分のマスに来たら「ブレイク」！', need:'break', count:1, hp:1 },
+  { tip:'ええ感じ！もう一度やってみよ🗡', need:'break', count:1, hp:1 },
+  { tip:'青いブロック🟦は2回ブレイクが必要\n1回目で赤くなるで', need:'break', count:1, hp:2 },
+  { tip:'最後の練習！ゆっくり3個来るで\n壊したら進んでもOK', need:'break', count:3, hp:1 },
+  { tip:'バッチリ！ゴールまで進もう🏁', need:'goal' },
+];
+let tutStep=0, tutDone=0, tutSpawned=0;
+function isTutorial(){ return !!song.tutorial; }
+function showTip(text){
+  const el=document.getElementById('tip');
+  if(!text){el.classList.add('hide');return;}
+  el.textContent=text;el.classList.remove('hide');
+}
+function tutProgress(kind){
+  if(!isTutorial()||state!=='play')return;
+  const st=TUTORIAL[tutStep]; if(!st||st.need!==kind)return;
+  tutDone++;
+  if(tutDone>=(st.count||1)){ tutStep++; tutDone=0; tutSpawned=0; showTip(TUTORIAL[tutStep]?.tip||''); }
+}
+function tutBeat(t){
+  const st=TUTORIAL[tutStep];
+  if(!st||st.need!=='break')return;
+  const want=st.count||1;
+  if(tutSpawned<want && notes.length===0){
+    const from=Math.min(player.idx+5,EXIT_INDEX);
+    notes.push({id:noteId++,idx:from,from,at:t,pop:t,hp:st.hp||1});
+    tutSpawned++;
+  }
+}
+
 function onBeat(n, t){
   // 赤いブロックが残っている間は全部その場で足踏み。ただし1拍だけ。
   const red = notes.find(nt => nt.hit);
-  if (red && n > (red.hitBeat ?? n) + 1){     // 1拍待っても壊せてない → ダメージ
+  if (red && n > (red.hitBeat ?? n) + 1 && !isTutorial()){     // 1拍待っても壊せてない → ダメージ
     notes.splice(notes.indexOf(red), 1);
     damage(t);
   }
-  const frozen = notes.some(nt => nt.hit);
+  // チュートリアルは、ブロックが目の前に来たらプレイヤーが押すまで待つ
+  const frozen = notes.some(nt => nt.hit) || (isTutorial() && notes.some(nt => nt.idx <= player.idx));
   if (n >= INTRO_BEATS && notes.length){
     for (const nt of notes){
       nt.from = nt.idx; nt.at = t;
@@ -600,7 +639,8 @@ function onBeat(n, t){
   }
   if(activeChart&&n>=INTRO_BEATS)chartFill(n,t);
   // ブロックを出す
-  if (n >= INTRO_BEATS && !frozen){
+  if (isTutorial()){ if(!frozen) tutBeat(t); }
+  else if (n >= INTRO_BEATS && !frozen){
     const lastIdx = Math.max(-99, ...notes.map(x => x.idx));
     if (activeChart ? chartSpawns(n)&&lastIdx<gIdx : gIdx - lastIdx >= nextGap){
       notes.push({ id: noteId++, idx: gIdx, from: gIdx, at: t, pop: t, hp: rollHp(gIdx - lastIdx) });
@@ -615,6 +655,7 @@ function onBeat(n, t){
 }
 
 function checkHit(t){
+  if (isTutorial()) return;   // チュートリアルではダメージなし
   for (const nt of [...notes]){
     if (nt.idx <= player.idx && !nt.hit){
       notes.splice(notes.indexOf(nt), 1);
@@ -669,6 +710,7 @@ function freeMove(t){
   player.from = player.idx; player.idx += 1; player.at = t;
   fx.push({ type: 'spark', idx: player.idx, t, d: .2 });
   charState = 'move'; charUntil = t + 0.18;
+  tutProgress('move');
   checkHit(t); // ブロックに突っ込んだらその場で当たり
 }
 function flashBtn(id){ const b = document.getElementById(id); b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 160); }
@@ -700,6 +742,7 @@ function doAction(type, n, t, diff){
       } else {
         notes.splice(notes.indexOf(target), 1);
         effects.push({ idx: target.idx, t });
+        tutProgress('break');
         if (moveLocked){ moveLocked = false; setLockUI(false); }
         playSE(word);
       }
@@ -1246,7 +1289,7 @@ function loop(){
       else {
         lineK++; gFrom = gIdx; gIdx = gIndexFor(lineK); gMoveAt = t;
         advanceView(t);
-        fillGap(gFrom + 1, gIdx, t);
+        if(!isTutorial()) fillGap(gFrom + 1, gIdx, t);
         texts.push({ s: '突破！', idx: player.idx, t, col: '#50e6ff' });
       }
     }
@@ -1299,7 +1342,9 @@ function nextLap(t, songEnded){
 function startGame(){
   document.querySelectorAll('.overlay').forEach(o=>o.classList.add('hide'));
   reset();progFill.style.width='0%';
-  lap=0;rate=1;applyRate();
+  lap=0;rate=song.rate||1;applyRate();
+  tutStep=0;tutDone=0;tutSpawned=0;
+  showTip(isTutorial()?TUTORIAL[0].tip:'');
   if(ctx.state==='suspended')ctx.resume();
   startMusicAt();state='play';startMoveScheduler();
 }
@@ -1378,7 +1423,10 @@ async function pickSong(sg, btn){
     if (ctx.state === 'suspended') await ctx.resume();
     if (!bufCache[sg.file]){
       label.textContent = '読み込み中…';
-      bufCache[sg.file] = await ctx.decodeAudioData(await loadAudio(sg.file));
+      let ab;
+      try { ab = await loadAudio(sg.file); }
+      catch(e){ if(!sg.fallback) throw e; ab = await loadAudio(sg.fallback); }  // 専用曲がまだ無ければ代わりの曲で
+      bufCache[sg.file] = await ctx.decodeAudioData(ab);
     }
     if(sg.chart&&!chartCache[sg.chart]){
       const r=await fetch(sg.chart);if(!r.ok)throw new Error('chart load');
