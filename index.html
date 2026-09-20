@@ -487,7 +487,7 @@ function reset(){
   revealEnd=REVEAL_ENDS[0];revealFrom=revealEnd;
   document.getElementById('impactVeil').classList.remove('hit');
   cv.style.transform = '';
-  hp = MAX_HP; player = { idx: 0, from: 0, at: 0 }; moveLocked = !song.tutorial;
+  hp = MAX_HP; player = { idx: 0, from: 0, at: 0 }; moveLocked = true;
   notes = []; effects = []; texts = []; fx = [];
   setLockUI(true);
   nextBeat = 0; acted = -1; pendingCheck = [];
@@ -589,16 +589,19 @@ document.getElementById('endlessBtn').addEventListener('click',()=>{
 });
 
 // ===== チュートリアル =====
+// 本編と同じ順番で覚える：ブレイク → 進む → 進みながらブレイク → 青ブロック → ライフ → 突破
 const TUTORIAL = [
-  { tip:'まずは「進む」を3回おしてみよう👣', need:'move', count:3 },
-  { tip:'ブロックが来るで🟪\n自分のマスに来たら「ブレイク」！', need:'break', count:1, hp:1 },
-  { tip:'ええ感じ！もう一度やってみよ🗡', need:'break', count:1, hp:1 },
-  { tip:'青いブロック🟦は2回ブレイクが必要\n1回目で赤くなるで', need:'break', count:1, hp:2 },
-  { tip:'最後の練習！ゆっくり3個来るで\n壊したら進んでもOK', need:'break', count:3, hp:1 },
-  { tip:'バッチリ！ゴールまで進もう🏁', need:'goal' },
+  { tip:'ブロックが来る。\n自分のマスに来たら「ブレイク」！', need:'break', count:1, hp:1 },
+  { tip:'「進む」が使えるようになった。\n3回進んでみよう', need:'move', count:3 },
+  { tip:'進んでいる間もブロックは来る。\n自分のマスに来たらブレイク（2個）', need:'break', count:2, hp:1 },
+  { tip:'青いブロックは2回ブレイク。\n1回目で赤くなる', need:'break', count:1, hp:2 },
+  { tip:'ライフは5つ（ハート）。\n壊しそこねると1つ減り、0でゲームオーバー\n（この練習では減らない）', need:'break', count:1, hp:1 },
+  { tip:'破線まで進むと「突破」。\n次の破線まで進んでクリア！', need:'goal' },
 ];
+const TUT_GOAL_LINE = 1;   // チュートリアルは2本目の破線でクリア
 let tutStep=0, tutDone=0, tutSpawned=0;
 function isTutorial(){ return !!song.tutorial; }
+function lastLine(){ return isTutorial() ? TUT_GOAL_LINE : LINES.length - 1; }
 function showTip(text){
   const el=document.getElementById('tip');
   if(!text){el.classList.add('hide');return;}
@@ -610,6 +613,7 @@ function tutProgress(kind){
   tutDone++;
   if(tutDone>=(st.count||1)){ tutStep++; tutDone=0; tutSpawned=0; showTip(TUTORIAL[tutStep]?.tip||''); }
 }
+// ブレイク練習のステップだけ、1個ずつブロックを出す（壊したら次）
 function tutBeat(t){
   const st=TUTORIAL[tutStep];
   if(!st||st.need!=='break')return;
@@ -619,6 +623,11 @@ function tutBeat(t){
     notes.push({id:noteId++,idx:from,from,at:t,pop:t,hp:st.hp||1});
     tutSpawned++;
   }
+}
+// 曲が終わっても終了せず、曲だけ最初から鳴らし直す
+function tutLoopMusic(){
+  notes = []; tutSpawned = 0; nextBeat = 0; acted = -1; pendingCheck = []; earlyInput = null;
+  stopMoveScheduler(); startMusicAt(); startMoveScheduler();
 }
 
 function onBeat(n, t){
@@ -1284,8 +1293,8 @@ function loop(){
       else{onBeat(nextBeat,bt);nextBeat++;}
     }
     if (state==='play' && player.idx >= LINES[lineK] && hp > 0){
-      if (lineK === LINES.length - 1 && endless){ nextLap(t,false); }
-      else if (lineK === LINES.length - 1){ fx.push({ type: 'goal', idx: player.idx, t, d: .5 }); end(true); }
+      if (lineK === lastLine() && endless && !isTutorial()){ nextLap(t,false); }
+      else if (lineK === lastLine()){ fx.push({ type: 'goal', idx: player.idx, t, d: .5 }); end(true); }
       else {
         lineK++; gFrom = gIdx; gIdx = gIndexFor(lineK); gMoveAt = t;
         advanceView(t);
@@ -1293,7 +1302,7 @@ function loop(){
         texts.push({ s: '突破！', idx: player.idx, t, col: '#50e6ff' });
       }
     }
-    if (t > songBuf.duration / rate){ if(endless) nextLap(t,true); else end(false); }
+    if (t > songBuf.duration / rate){ if(isTutorial()) tutLoopMusic(); else if(endless) nextLap(t,true); else end(false); }
   }
   if (state === 'play' && songBuf) progFill.style.width = (Math.min(1, Math.max(0, t / (songBuf.duration / rate))) * 100) + '%';
   draw(t);
