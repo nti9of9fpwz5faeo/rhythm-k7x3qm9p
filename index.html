@@ -570,12 +570,13 @@ function chartFill(n,t){
 let GAPS=DIFFICULTIES.normal.gaps;
 // かたいブロック（2回ブレイクで壊れる）。1回目は手前のマスにいるうちに割る
 function rollHp(gap){ // 手前が空いてる（gap2以上）ときだけ、かたいブロックにする
+  if(isTutorial())return 1;   // チュートリアルの本番パートは青ブロックなし
   return gap >= 2 && rand() < (DIFFICULTIES[difficulty].hardRate || 0) ? 2 : 1;
 }
 function gapBefore(i){ const prev = notes.filter(x => x.idx < i).map(x => x.idx); return prev.length ? i - Math.max(...prev) : 99; }
 let nextGap=4,runLen=1;
 function pickGap(){
-  if(isTutorial()&&!tutSt()?.live)return 3;   // 練習中はゆったり
+  if(isTutorial())return 3+Math.floor(rand()*2);   // チュートリアルは終始ゆったり（3〜4マス空ける、連打なし）
   let gp=GAPS[Math.floor(rand()*GAPS.length)];
   if(runLen>=DIFFICULTIES[difficulty].maxRun)gp=3;
   runLen=gp===1?runLen+1:1;
