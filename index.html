@@ -1532,14 +1532,15 @@ function detectBeat(buf){
   const sr=buf.sampleRate,d=buf.getChannelData(0),hop=512,fr=sr/hop;
   const len=Math.min(d.length,Math.floor(sr*90));
   const n=Math.floor(len/hop),on=new Float32Array(n);
-  let lp=0,prev=0;
-  for(let i=0;i<n;i++){let e=0;for(let j=i*hop,k=j+hop;j<k;j++){lp+=(d[j]-lp)*.05;e+=lp*lp;}
-    const v=Math.log(e+1e-6);on[i]=i?Math.max(0,v-prev):0;prev=v;}
+  // 低音(キック)と、音の立ち上がり(高め)の両方を見る
+  let lp=0,x1=0,pl=0,phh=0;
+  for(let i=0;i<n;i++){let el=0,eh=0;for(let j=i*hop,k=j+hop;j<k;j++){const x=d[j];lp+=(x-lp)*.05;el+=lp*lp;const h=x-x1;x1=x;eh+=h*h;}
+    const vl=Math.log(el+1e-6),vh=Math.log(eh+1e-6);on[i]=i?Math.max(0,vl-pl)+Math.max(0,vh-phh):0;pl=vl;phh=vh;}
   let m=0;for(let i=0;i<n;i++)m+=on[i];m/=n||1;for(let i=0;i<n;i++)on[i]=Math.max(0,on[i]-m);
   const at=x=>{const i=Math.floor(x),f=x-i;return i+1<n?on[i]*(1-f)+on[i+1]*f:0;};
   const score=bpm=>{const L=fr*60/bpm;let s=0;for(let i=0;i+2*L<n;i++)s+=on[i]*(at(i+L)+.5*at(i+2*L));return s;};
   let best=120,bs=-1;
-  for(let b=80;b<=175;b+=.5){const v=score(b);if(v>bs){bs=v;best=b;}}
+  for(let b=95;b<=175;b+=.5){const v=score(b);if(v>bs){bs=v;best=b;}}
   // テンポと最初のドンを一緒に細かく合わせる
   let fb=best,ph=0,ps=-1;
   for(let b=best-1;b<=best+1;b+=.02){const P=fr*60/b;
