@@ -867,9 +867,19 @@ function startMoveScheduler(){
     while(songStart+beatTime(nextMoveBeat)<now+.12){
       const n=nextMoveBeat++,at=songStart+beatTime(n);
       if(at>=now&&n>=INTRO_BEATS&&notes.length)playMoveSE(n,at);
+      if(at>=now&&song.local)playGuideClick(n,at);
     }
   };
   moveScheduler=setInterval(schedule,25);schedule();
+}
+// 自分の曲用のガイド音（拍ごとに「カッ」、4拍ごとに少し高く）
+function playGuideClick(n,at){
+  const o=ctx.createOscillator(),g=ctx.createGain(),first=n%4===0;
+  o.type='square';o.frequency.value=first?1760:1320;
+  g.gain.setValueAtTime(0,at);g.gain.linearRampToValueAtTime(first?.22:.14,at+.002);g.gain.exponentialRampToValueAtTime(.0001,at+.05);
+  o.connect(g);g.connect(ctx.destination);
+  moveVoices.add(o);o.onended=()=>{moveVoices.delete(o);o.disconnect();g.disconnect();};
+  o.start(at);o.stop(at+.06);
 }
 function playMoveSE(n,at){
   if (!moveBuf || state !== 'play') return;
@@ -1564,7 +1574,7 @@ myFile.addEventListener('change',async()=>{
     await new Promise(r=>setTimeout(r,30));
     const r=detectBeat(buf);
     const name=f.name.replace(/\.[^.]+$/,'');
-    mySong={name,file:'local:'+f.name,bpm:r.bpm,offset:r.offset,baseOffset:r.offset,level:'自分の曲',buf};
+    mySong={name,file:'local:'+f.name,bpm:r.bpm,offset:r.offset,baseOffset:r.offset,level:'自分の曲',local:true,buf};
     document.getElementById('myName').textContent=name;showMyBpm();myPanel.classList.remove('hide');
     lt.textContent='BPMがずれてたら −＋ で直してね';
   }catch(e){lt.textContent='この曲は読みこめませんでした。別の曲をえらんでください。';}
