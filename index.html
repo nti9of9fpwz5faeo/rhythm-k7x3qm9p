@@ -21,6 +21,9 @@
   #tip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,90vw);padding:14px 18px;border:3px solid #5ddfeb;border-radius:14px;background:#081221f2;color:#fff;font-size:16px;font-weight:800;line-height:1.6;text-align:center;white-space:pre-line;box-shadow:0 0 22px #5ddfeb88;z-index:3;pointer-events:none}
   #tip.hide{display:none}
   #fieldWrap{position:relative}
+  #scoreHud{text-align:center;margin-top:6px;font:900 34px/1 system-ui,sans-serif;letter-spacing:.03em;color:#fff;-webkit-text-stroke:5px #081221;paint-order:stroke fill;font-variant-numeric:tabular-nums}
+  #scoreHud.hide{display:none}
+  @media(max-height:680px){#scoreHud{font-size:26px;margin-top:3px}}
   #judge{height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
   #jWord{font-size:23px;font-weight:700;letter-spacing:.16em;min-height:23px}
   #jSub{font-size:10px;margin-top:5px;color:#a7bec5;letter-spacing:.12em;min-height:10px}
@@ -229,6 +232,7 @@
   <div id="top">
   <div class="hudRow"><div id="hud" aria-label="体力5"></div><button id="pauseBtn" aria-label="一時停止・終了" disabled>Ⅱ</button></div>
   <div id="progress"><i id="progFill"></i></div>
+  <div id="scoreHud" class="hide" aria-live="off"><span id="scoreNum">0</span></div>
   </div>
   <div id="spot" class="hide"></div><div id="fieldWrap"><canvas id="cv"></canvas><div id="tip" class="hide"></div><div id="judge"><span id="jWord"></span><small id="jSub"></small></div></div>
   <div id="controls">
@@ -293,6 +297,17 @@ function updateEndlessUI(){ document.getElementById('endlessBtn').setAttribute('
 function setSong(sg){ song = sg; activeChart=chartCache[sg.chart]||null; GAPS = sg.dense ? DIFFICULTIES[difficulty].dense : DIFFICULTIES[difficulty].gaps; applyRate(); }
 const COLS = 8, ROWS = 11;
 const MAX_HP = 5;
+// スコアモード（試し）：ゴールなし・曲が終わったら終了。点は「進む」で大きく入り、1マスの値段は直前のブレイク判定で決まる。
+// 斬るだけでも少し入る（進むの1/10）。false で前のゴール方式に戻る。チュートリアルとエンドレスは前のまま
+const SCORE_MODE = true;
+const MOVE_PTS = { PERFECT: 100, GREAT: 80, GOOD: 50, MISS: 0 }, BREAK_RATE = 0.1;
+const PRICE_COL = { 100: '#ffffff', 80: '#50e6ff', 50: '#7dffb0', 0: '#8a96a8' };
+let runScore = 0, movePrice = 0, runSteps = 0, courseLap = 0;
+function scoreOn(){ return SCORE_MODE && !isTutorial() && !endless; }
+function addScore(pts, t, big){
+  runScore += pts; document.getElementById('scoreNum').textContent = runScore.toLocaleString();
+  texts.push({ s: '+' + pts, idx: player.idx, t, col: big ? (PRICE_COL[movePrice] || '#fff') : (PRICE_COL[pts * 10] || '#fff'), big: !!big, dim: !big });
+}
 // チェックポイント（破線）。着いたら解除されて、Gが次の場所へ移動
 const LINES = [4, 10, 16, 22, 28, 35];
 const REVEAL_ENDS = [19, 26, 32, 35, 39, 39]; // 開始時は手前の横道3本まで
@@ -506,6 +521,8 @@ function reset(){
   document.getElementById('impactVeil').classList.remove('hit');
   cv.style.transform = '';
   hp = MAX_HP; player = { idx: 0, from: 0, at: 0 }; moveLocked = true;
+  runScore = 0; movePrice = 0; runSteps = 0; courseLap = 0;
+  document.getElementById('scoreNum').textContent = '0'; document.getElementById('scoreHud').classList.toggle('hide', !scoreOn());
   notes = []; effects = []; texts = []; fx = [];
   setLockUI(true); tutClearUI();
   nextBeat = 0; acted = -1; pendingCheck = [];
@@ -775,6 +792,7 @@ function judgeOf(diff){
 let jTimer = null;
 function showJudge(word, sub){
   counts[word]++;
+  if (scoreOn()){ movePrice = MOVE_PTS[word]; if (word !== 'MISS') addScore(Math.round(MOVE_PTS[word] * BREAK_RATE), songTime(), false); }
   if (word === 'MISS') combo = 0; else { combo++; maxCombo = Math.max(maxCombo, combo); }
   const el = document.getElementById('judge'), w = document.getElementById('jWord');
   w.textContent = word; el.style.setProperty('--judge-color',JUDGE[word].col); w.style.color = JUDGE[word].col; w.style.textShadow = '0 2px 0 #07101c';
@@ -793,6 +811,7 @@ function freeMove(t){
   player.from = player.idx; player.idx += 1; player.at = t;
   fx.push({ type: 'spark', idx: player.idx, t, d: .2 });
   charState = 'move'; charUntil = t + 0.18;
+  if (scoreOn()){ runSteps++; addScore(movePrice, t, true); }
   tutProgress('move');
   checkHit(t); // ブロックに突っ込んだらその場で当たり
 }
@@ -923,6 +942,7 @@ function calculateResult(judgments,progress,clear){
   const total=Object.keys(JUDGMENT_WEIGHT).reduce((n,k)=>n+judgments[k],0);
   const weighted=Object.keys(JUDGMENT_WEIGHT).reduce((n,k)=>n+judgments[k]*JUDGMENT_WEIGHT[k],0);
   const accuracy=total?weighted/total:0;
+  if(scoreOn())return{total,accuracy,score:runScore,rank:'—',badge:clear&&total>0?(judgments.PERFECT===total?'ALL PERFECT':judgments.MISS===0?'FULL COMBO':''):''};
   const score=Math.max(0,Math.min(SCORE_MAX,Math.round(SCORE_MAX*accuracy*Math.max(0,Math.min(1,progress)))));
   const rank=!clear?'—':score>=980000?'S':score>=900000?'A':score>=800000?'B':score>=650000?'C':'D';
   const badge=clear&&total>0?(judgments.PERFECT===total?'ALL PERFECT':judgments.MISS===0?'FULL COMBO':'STAGE CLEAR'):'';
@@ -930,10 +950,10 @@ function calculateResult(judgments,progress,clear){
 }
 function captureResult(clear){
   const judgments={...counts},progress=Math.min(1,player.idx/GOAL_INDEX);
-  const result={...calculateResult(judgments,progress,clear),counts:judgments,progress,clear,heroId:runHeroId,difficulty:runDifficulty,songName:song.name,hp:Math.max(0,hp),maxCombo,seconds:Math.max(0,songTime()),beats:Math.max(0,nextBeat)};
-  const key=`neon-blade-best-v1:${song.file}:${runDifficulty}`;
+  const result={...calculateResult(judgments,progress,clear),counts:judgments,progress,clear,heroId:runHeroId,difficulty:runDifficulty,songName:song.name,hp:Math.max(0,hp),maxCombo,seconds:Math.max(0,songTime()),beats:Math.max(0,nextBeat),steps:scoreOn()?runSteps:null};
+  const key=`neon-blade-best-v1:${song.file}:${runDifficulty}`+(scoreOn()?':score':'');
   let previous=0;
-  try{const v=Number(localStorage.getItem(key));if(Number.isInteger(v)&&v>=0&&v<=SCORE_MAX)previous=v;}catch(e){}
+  try{const v=Number(localStorage.getItem(key));if(Number.isInteger(v)&&v>=0&&(scoreOn()||v<=SCORE_MAX))previous=v;}catch(e){}
   result.newBest=clear&&result.score>previous;
   result.best=result.newBest?result.score:previous;
   if(result.newBest){try{localStorage.setItem(key,String(result.score));}catch(e){}}
@@ -949,7 +969,7 @@ function resultMarkup(prefix,clear){
     <div class="resultFoot"><span class="resultBadge" data-result-badge></span><span data-result-foot></span></div>
     <div class="resultActions"><button class="ovBtn" data-retry>もう一回</button><button class="ovBtn sub" data-select>曲えらび</button></div>
     <button class="resultSkip" data-result-skip>タップでまとめて表示</button>
-    <details class="scoreHelp"><summary>スコアのしくみ</summary><p>判定精度 × 到達率 × 1,000,000点。PERFECT=100%、GREAT=80%、GOOD=50%、MISS=0%の平均が判定精度です。MISSは被弾とタイミング外の入力を含みます。<br>クリア時のランク：S 98万 / A 90万 / B 80万 / C 65万点以上。自己ベストは曲・難易度ごとに保存します。</p></details>
+    <details class="scoreHelp"><summary>スコアのしくみ</summary><p>${scoreOn()?`1マス進むごとに点が入ります。値段は直前のブレイクの判定で決まります（PERFECT 100／GREAT 80／GOOD 50／被弾・MISS 0）。ブレイクそのものでも、その1/10が入ります。曲が最後まで流れたら終了です。`:`判定精度 × 到達率 × 1,000,000点。PERFECT=100%、GREAT=80%、GOOD=50%、MISS=0%の平均が判定精度です。MISSは被弾とタイミング外の入力を含みます。<br>クリア時のランク：S 98万 / A 90万 / B 80万 / C 65万点以上。自己ベストは曲・難易度ごとに保存します。`}</p></details>
   </div>`;
 }
 function initResultScreens(){
@@ -969,7 +989,7 @@ function renderResult(result){
     const n=result.counts[row.dataset.judgment];row.querySelector('dd span').textContent=n;
     row.style.setProperty('--portion',(result.total?n/result.total*100:0)+'%');
   }
-  text('badge',result.clear?result.badge:`到達率 ${Math.floor(result.progress*100)}%`);
+  text('badge',result.steps!=null?(`${result.steps}マス進んだ`+(result.badge?'  '+result.badge:'')):result.clear?result.badge:`到達率 ${Math.floor(result.progress*100)}%`);
   const seconds=Math.floor(result.seconds),time=`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
   text('foot',`残りHP ${result.hp} / ${time}`);
   renderHeroCanvas(ov.querySelector('canvas'),result.heroId);
@@ -1295,7 +1315,8 @@ function draw(t){
     const p=cellXY(x.idx),k=(t-x.t)/.5;
     // 画面端でもヒントが切れない位置に置く。
     const half=g.measureText(x.s).width/2;
-    g.globalAlpha=1-k;g.fillStyle=x.col;g.fillText(x.s,Math.max(half+3,Math.min(boardW-half-3,p.x)),Math.max(13,p.y-cell*.55-k*cell*.25));g.globalAlpha=1;
+    if(x.big){g.save();g.font=`900 ${Math.max(14,Math.round(cell*.42))}px system-ui,sans-serif`;const hw=g.measureText(x.s).width/2,bx=Math.max(hw+4,Math.min(boardW-hw-4,p.x)),by=Math.max(16,p.y-cell*.62-k*cell*.35);g.lineWidth=4;g.strokeStyle='#081221';g.globalAlpha=1-k;g.strokeText(x.s,bx,by);g.fillStyle=x.col;g.fillText(x.s,bx,by);g.restore();continue;}
+    g.globalAlpha=(1-k)*(x.dim?.8:1);g.fillStyle=x.col;g.fillText(x.s,Math.max(half+3,Math.min(boardW-half-3,p.x)),Math.max(13,p.y-cell*.55-k*cell*.25));g.globalAlpha=1;
   }
 }
 function edgeLine(i){
@@ -1378,7 +1399,8 @@ function loop(){
       else{onBeat(nextBeat,bt);nextBeat++;}
     }
     if (state==='play' && player.idx >= LINES[lineK] && hp > 0){
-      if (lineK === LINES.length - 1 && endless && !isTutorial()){ nextLap(t,false); }
+      if (lineK === LINES.length - 1 && scoreOn()){ nextCourse(t); }
+      else if (lineK === LINES.length - 1 && endless && !isTutorial()){ nextLap(t,false); }
       else if (lineK === LINES.length - 1){ fx.push({ type: 'goal', idx: player.idx, t, d: .5 }); end(true); }
       else {
         lineK++; gFrom = gIdx; gIdx = gIndexFor(lineK); gMoveAt = t;
@@ -1388,7 +1410,7 @@ function loop(){
       }
     }
     if (isTutorial()){ const st=tutSt(); if(st?.auto && t-tutStepAt>=st.auto) tutAdvance(t); }
-    if (t > songBuf.duration / rate){ if(isTutorial()&&!tutSt()?.live) tutLoopMusic(); else if(endless&&!isTutorial()) nextLap(t,true); else end(false); }
+    if (t > songBuf.duration / rate){ if(isTutorial()&&!tutSt()?.live) tutLoopMusic(); else if(endless&&!isTutorial()) nextLap(t,true); else end(scoreOn()); }
   }
   if (state === 'play' && songBuf) progFill.style.width = (Math.min(1, Math.max(0, t / (songBuf.duration / rate))) * 100) + '%';
   draw(t);
@@ -1423,6 +1445,15 @@ function startMusicAt(rawPosition=0){
   songStart=at-offset;syncClock();songSrc.start(at,Math.min(offset*rate,songBuf.duration));
 }
 // 1周まわった（または曲が終わった）ときに、速くして最初から
+// スコアモード：最後のラインに着いたらコースの頭から続ける。曲・拍・速さはそのまま
+function nextCourse(t){
+  courseLap++;
+  player = { idx: 0, from: 0, at: t }; notes = []; effects = []; fx = []; pendingCheck = []; nextGap = 4; runLen = 1;
+  lineK = 0; gIdx = gIndexFor(0); gFrom = gIdx; gMoveAt = -9;
+  cameraRow=0;cameraFrom=0;cameraTarget=0;cameraAt=-9;setPalette(courseLap % PALETTES.length);
+  revealEnd=REVEAL_ENDS[0];revealFrom=revealEnd;
+  texts.push({ s: 'COURSE ' + (courseLap + 1), idx: 0, t, col: '#ffe941', big: true });
+}
 function nextLap(t, songEnded){
   if(!songEnded){ lap++; rate = Math.min(2.2, 1 + lap * 0.1); applyRate(); }
   showJudge('PERFECT', songEnded ? 'LAP ' + (lap+1) : 'SPEED UP ×' + rate.toFixed(1));
