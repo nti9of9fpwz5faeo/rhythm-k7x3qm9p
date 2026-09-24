@@ -21,6 +21,7 @@
   #tip{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,90vw);padding:14px 18px;border:3px solid #5ddfeb;border-radius:14px;background:#081221f2;color:#fff;font-size:16px;font-weight:800;line-height:1.6;text-align:center;white-space:pre-line;box-shadow:0 0 22px #5ddfeb88;z-index:3;pointer-events:none}
   #tip.hide{display:none}
   #fieldWrap{position:relative}
+  #verBadge{display:inline-block;margin:2px auto 6px;padding:3px 12px;border-radius:999px;background:#081221;color:#ffe941;font:800 13px/1.4 system-ui,sans-serif;letter-spacing:.04em}
   #scoreHud{text-align:center;margin-top:6px;font:900 34px/1 system-ui,sans-serif;letter-spacing:.03em;color:#fff;-webkit-text-stroke:5px #081221;paint-order:stroke fill;font-variant-numeric:tabular-nums}
   #scoreHud.hide{display:none}
   @media(max-height:680px){#scoreHud{font-size:26px;margin-top:3px}}
@@ -248,6 +249,7 @@
 <div class="overlay" id="startOv">
   <span class="eyebrow">MOVE WITH THE BEAT</span>
   <h1>NEON <b>BLADE</b></h1>
+  <span id="verBadge">バージョン v2</span>
   <button id="heroOpen" disabled><canvas id="heroMini" width="240" height="180" aria-hidden="true"></canvas><span><small>CHARACTER</small><strong id="heroCurrent">ネオン</strong></span><b>変更 ↗</b></button>
   <p id="loadTxt">読み込み中…</p>
   <div id="difficultyPicker" role="group" aria-label="難易度"><button class="difficultyBtn" data-difficulty="normal" aria-pressed="true">NORMAL</button><button class="difficultyBtn" data-difficulty="hard" aria-pressed="false">HARD</button><button class="difficultyBtn" id="endlessBtn" aria-pressed="false">エンドレス</button></div>
